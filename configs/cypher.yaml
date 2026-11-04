@@ -1,12 +1,36 @@
-# CYPhER Master Application Configuration (v2.0)
+# CYPhER Master Application Configuration (v2.2)
 system:
   name: "CYPhER Multi-Model Road Perception System"
-  version: "2.0.0"
+  version: "2.2.0"
   device: "cuda" # cuda or cpu
   max_vram_gb: 6.0
   safety_headroom_gb: 1.0
   default_mode: "all"
+  default_profile: "balanced" # fast, balanced, high_accuracy
   output_dir: "outputs"
+
+adaptive_perception:
+  enabled: true
+  profiles:
+    fast:
+      imgsz: 640
+      enable_candidate_zoom: true
+      max_candidate_crops: 1
+      enable_independent_tiling: false
+      target_latency_ms: 100.0
+    balanced:
+      imgsz: 640
+      enable_candidate_zoom: true
+      max_candidate_crops: 3
+      enable_independent_tiling: false
+      target_latency_ms: 200.0
+    high_accuracy:
+      imgsz: 640
+      enable_candidate_zoom: true
+      max_candidate_crops: 4
+      enable_independent_tiling: true
+      max_independent_tiles: 4
+      target_latency_ms: 400.0
 
 thresholds:
   damage_confidence: 0.25
@@ -45,3 +69,4 @@ visualizations:
   draw_vehicle_tracks: true
   draw_top_hud: true
   overlay_format: "jpg"
+

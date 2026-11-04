@@ -62,3 +62,4 @@ Evaluated on 1,172 holdout road patches:
 - **Peak VRAM in Full `all` Mode Execution:** **324.6 MB** (out of 6,140 MB available on NVIDIA RTX 4050 Laptop GPU).
 - **GPU Safety Headroom:** **5,815 MB free VRAM** (Zero risk of Out-Of-Memory crashes).
 - **CPU Fallback:** Fully verified; seamless execution on Intel/AMD host CPU when CUDA is disabled.
+

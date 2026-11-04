@@ -26,3 +26,4 @@
 | **13. Validated Roughness / IRI** | **Vertical Acceleration Profiler** | End-to-end 1D CNN | Signal-processing FFT + RMS power of vertical acceleration synchronized with vehicle forward speed. | `road_cv/geometry/` interface | MIT | **Optimal** (CPU/sensor bound) |
 | **14. Calibrated Pothole Geometry** | **Planar Homography Model** | Stereo Disparity / Neural Radiance | Estimates metric area and depth anomaly using camera extrinsic pitch angle and height with planar projection. | `road_cv/geometry/damage_assessor.py` | MIT | **Optimal** (0 MB extra GPU) |
 | **15. Multi-Model Fusion** | **CYPhER Unified Engine** | Black-box Ensembling | Explainable multi-modal arbiter combining damage, water, weather, vehicles, and geometry. | `integrated_road_pipeline.py` | Proprietary CYPhER | **Optimal** (Sequential scheduling) |
+

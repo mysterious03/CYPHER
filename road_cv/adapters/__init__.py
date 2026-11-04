@@ -38,3 +38,4 @@ ADAPTER_MAP = {
     "roughness": RoughnessAdapter,
     "pothole_geometry": PotholeGeometryAdapter
 }
+

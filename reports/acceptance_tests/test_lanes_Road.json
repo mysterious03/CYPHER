@@ -1,0 +1,47 @@
+{
+  "source": "Road.jpg",
+  "timestamp": "2026-11-05T02:01:50.059262",
+  "image_size": {
+    "width": 2400,
+    "height": 1604
+  },
+  "selected_mode": "lanes",
+  "executed_modes_count": 1,
+  "capabilities": {
+    "lanes": {
+      "mode": "lanes",
+      "status": "success",
+      "model_name": "Road Boundary & Polyline Lane Model",
+      "predictions": {
+        "lane_count": 2,
+        "lanes": [
+          {
+            "lane_type": "estimated_left_boundary",
+            "confidence": 0.5
+          },
+          {
+            "lane_type": "estimated_right_boundary",
+            "confidence": 0.5
+          }
+        ]
+      },
+      "warnings": [],
+      "latency_ms": 0.0
+    }
+  },
+  "fusion": {
+    "overall_road_safety_risk": "LOW_RISK",
+    "fusion_confidence": 0.95,
+    "detected_hazards_count": 0,
+    "hazards": [],
+    "fusion_policy": "Explainable Rule-Based Evidence Arbiter (CYPhER Phase 7)"
+  },
+  "warnings": [],
+  "performance": {
+    "total_pipeline_latency_ms": 12.35,
+    "fps": 80.97,
+    "peak_gpu_memory_mb": 100.35,
+    "device": "cuda"
+  },
+  "visualization_path": "reports\\acceptance_tests\\cypher_Road_overlay.jpg"
+}

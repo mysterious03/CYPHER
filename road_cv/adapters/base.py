@@ -62,3 +62,4 @@ class BaseAdapter(abc.ABC):
         }
         out.update(extra)
         return out
+

@@ -20,7 +20,8 @@ from road_cv.adapters.vision_adapters import (
     WaterAdapter, DepthAdapter, SurfaceAdapter
 )
 from road_cv.adapters.specialized_adapters import (
-    FrictionAdapter, RoughnessAdapter, PotholeGeometryAdapter, WeatherAdapter
+    FrictionAdapter, RoughnessAdapter, PotholeGeometryAdapter, WeatherAdapter,
+    LaneAdapter, ObstacleAdapter, AccidentAdapter
 )
 from road_cv.core.fusion import CYPhERHazardFusion
 
@@ -111,3 +112,46 @@ def test_orchestrator_all_mode_on_frame(dummy_frame):
     assert "performance" in output
     assert output["executed_modes_count"] == 3
     assert output["capabilities"]["damage"]["status"] == "success"
+
+def test_v22_weather_adapter(dummy_frame):
+    """Tests upgraded V2.2 multi-task neural weather adapter."""
+    adapter = WeatherAdapter()
+    res = adapter.predict(dummy_frame)
+    assert res["status"] == "success"
+    assert "predicted_weather" in res["predictions"]
+    assert "lighting_condition" in res["predictions"]
+    assert res["predictions"]["method"] in ["neural_mobilenet_v3", "photometric_optical_fallback"]
+
+def test_v22_lane_adapter(dummy_frame):
+    """Tests upgraded V2.2 dedicated lane detector."""
+    adapter = LaneAdapter()
+    res = adapter.predict(dummy_frame)
+    assert res["status"] == "success"
+    assert "left_boundary_points" in res["predictions"]
+    assert "right_boundary_points" in res["predictions"]
+    assert "corridor_width_px" in res["predictions"]
+
+def test_v22_obstacle_adapter(dummy_frame):
+    """Tests upgraded V2.2 open-vocabulary obstacle perception."""
+    adapter = ObstacleAdapter()
+    res = adapter.predict(dummy_frame)
+    assert res["status"] == "success"
+    assert "obstacles" in res["predictions"]
+
+def test_v22_accident_adapter(dummy_frame):
+    """Tests upgraded V2.2 temporal & geometric accident intelligence."""
+    adapter = AccidentAdapter()
+    res = adapter.predict(dummy_frame)
+    assert res["status"] == "success"
+    assert "anomaly_detected" in res["predictions"]
+
+def test_v22_adaptive_perception_pipeline(dummy_frame):
+    """Tests CYPhER V2.2 master adaptive perception pipeline."""
+    from road_cv.adaptive.pipeline import AdaptivePerceptionPipeline
+    pipeline = AdaptivePerceptionPipeline(damage_model_path="runs/detect/road_damage_v22/weights/best.pt")
+    out = pipeline.run_adaptive_inference(dummy_frame, profile="fast")
+    assert out["status"] == "success"
+    assert "refinement_stats" in out
+    assert "detections" in out
+    assert out["profile_key"] == "fast"
+

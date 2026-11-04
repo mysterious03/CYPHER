@@ -1,0 +1,36 @@
+{
+  "source": "Road.jpg",
+  "timestamp": "2026-11-05T02:01:48.375813",
+  "image_size": {
+    "width": 2400,
+    "height": 1604
+  },
+  "selected_mode": "damage",
+  "executed_modes_count": 1,
+  "capabilities": {
+    "damage": {
+      "mode": "damage",
+      "status": "success",
+      "model_name": "Custom YOLO26n Road Damage Detector",
+      "predictions": [],
+      "warnings": [],
+      "latency_ms": 1227.98,
+      "detection_count": 0
+    }
+  },
+  "fusion": {
+    "overall_road_safety_risk": "LOW_RISK",
+    "fusion_confidence": 0.95,
+    "detected_hazards_count": 0,
+    "hazards": [],
+    "fusion_policy": "Explainable Rule-Based Evidence Arbiter (CYPhER Phase 7)"
+  },
+  "warnings": [],
+  "performance": {
+    "total_pipeline_latency_ms": 1400.94,
+    "fps": 0.71,
+    "peak_gpu_memory_mb": 51.2,
+    "device": "cuda"
+  },
+  "visualization_path": "reports\\acceptance_tests\\cypher_Road_overlay.jpg"
+}

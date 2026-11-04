@@ -1,0 +1,241 @@
+{
+  "source": "Road.jpg",
+  "timestamp": "2026-11-05T02:01:48.704244",
+  "image_size": {
+    "width": 2400,
+    "height": 1604
+  },
+  "selected_mode": "vehicles",
+  "executed_modes_count": 1,
+  "capabilities": {
+    "vehicles": {
+      "mode": "vehicles",
+      "status": "success",
+      "model_name": "YOLO26n Vehicle Instance Segmenter & Tracker",
+      "predictions": [
+        {
+          "track_id": 1,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.853,
+          "box": [
+            1981,
+            1107,
+            2351,
+            1372
+          ]
+        },
+        {
+          "track_id": 2,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.789,
+          "box": [
+            1458,
+            1144,
+            1808,
+            1449
+          ]
+        },
+        {
+          "track_id": 3,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.772,
+          "box": [
+            2269,
+            1326,
+            2398,
+            1604
+          ]
+        },
+        {
+          "track_id": 4,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.753,
+          "box": [
+            1387,
+            862,
+            1621,
+            1054
+          ]
+        },
+        {
+          "track_id": 5,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.728,
+          "box": [
+            1820,
+            905,
+            2101,
+            1111
+          ]
+        },
+        {
+          "track_id": 6,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.727,
+          "box": [
+            1642,
+            745,
+            1840,
+            902
+          ]
+        },
+        {
+          "track_id": 7,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.713,
+          "box": [
+            275,
+            357,
+            374,
+            425
+          ]
+        },
+        {
+          "track_id": 8,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.66,
+          "box": [
+            2023,
+            779,
+            2252,
+            930
+          ]
+        },
+        {
+          "track_id": 9,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.616,
+          "box": [
+            1295,
+            710,
+            1474,
+            860
+          ]
+        },
+        {
+          "track_id": 10,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.615,
+          "box": [
+            2161,
+            869,
+            2400,
+            1060
+          ]
+        },
+        {
+          "track_id": 11,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.587,
+          "box": [
+            2313,
+            1000,
+            2399,
+            1157
+          ]
+        },
+        {
+          "track_id": 12,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.57,
+          "box": [
+            1770,
+            594,
+            1928,
+            707
+          ]
+        },
+        {
+          "track_id": 13,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.502,
+          "box": [
+            1475,
+            538,
+            1632,
+            648
+          ]
+        },
+        {
+          "track_id": 14,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.425,
+          "box": [
+            1688,
+            526,
+            1830,
+            630
+          ]
+        },
+        {
+          "track_id": 15,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.415,
+          "box": [
+            1934,
+            688,
+            2141,
+            824
+          ]
+        },
+        {
+          "track_id": 16,
+          "class_id": 7,
+          "class_name": "truck",
+          "confidence": 0.402,
+          "box": [
+            2227,
+            670,
+            2399,
+            840
+          ]
+        },
+        {
+          "track_id": 17,
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.371,
+          "box": [
+            1222,
+            499,
+            1344,
+            618
+          ]
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 215.98,
+      "vehicle_count": 17
+    }
+  },
+  "fusion": {
+    "overall_road_safety_risk": "LOW_RISK",
+    "fusion_confidence": 0.95,
+    "detected_hazards_count": 0,
+    "hazards": [],
+    "fusion_policy": "Explainable Rule-Based Evidence Arbiter (CYPhER Phase 7)"
+  },
+  "warnings": [],
+  "performance": {
+    "total_pipeline_latency_ms": 273.98,
+    "fps": 3.65,
+    "peak_gpu_memory_mb": 66.56,
+    "device": "cuda"
+  },
+  "visualization_path": "reports\\acceptance_tests\\cypher_Road_overlay.jpg"
+}

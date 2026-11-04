@@ -331,3 +331,4 @@ class SurfaceAdapter(BaseAdapter):
             predictions=results,
             latency_ms=latency
         )
+

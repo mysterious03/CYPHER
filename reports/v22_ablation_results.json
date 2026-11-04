@@ -1,0 +1,97 @@
+{
+  "1_baseline_independent": {
+    "config": "1_baseline_independent",
+    "precision": 72.22,
+    "recall": 44.07,
+    "f1": 54.74,
+    "small_defect_recall": 0.0,
+    "total_tp": 26,
+    "total_fp": 10,
+    "per_class_recall": {
+      "D00": 17.65,
+      "D10": 0.0,
+      "D20": 61.29,
+      "D30": 36.36
+    },
+    "median_latency_ms": 9.91,
+    "peak_vram_mb": 56.34,
+    "avg_pixels_per_frame": 409600,
+    "avg_invocations_per_frame": 1.0
+  },
+  "2_road_aware_spatial_only": {
+    "config": "2_road_aware_spatial_only",
+    "precision": 61.7,
+    "recall": 49.15,
+    "f1": 54.71,
+    "small_defect_recall": 0.0,
+    "total_tp": 29,
+    "total_fp": 18,
+    "per_class_recall": {
+      "D00": 17.65,
+      "D10": 0.0,
+      "D20": 67.74,
+      "D30": 45.45
+    },
+    "median_latency_ms": 10.0,
+    "peak_vram_mb": 56.33,
+    "avg_pixels_per_frame": 409600,
+    "avg_invocations_per_frame": 1.0
+  },
+  "3_adaptive_crops_only": {
+    "config": "3_adaptive_crops_only",
+    "precision": 82.76,
+    "recall": 40.68,
+    "f1": 54.55,
+    "small_defect_recall": 0.0,
+    "total_tp": 24,
+    "total_fp": 5,
+    "per_class_recall": {
+      "D00": 17.65,
+      "D10": 0.0,
+      "D20": 54.84,
+      "D30": 36.36
+    },
+    "median_latency_ms": 10.14,
+    "peak_vram_mb": 56.33,
+    "avg_pixels_per_frame": 544768,
+    "avg_invocations_per_frame": 1.33
+  },
+  "4_uncertainty_guided_only": {
+    "config": "4_uncertainty_guided_only",
+    "precision": 65.0,
+    "recall": 44.07,
+    "f1": 52.53,
+    "small_defect_recall": 0.0,
+    "total_tp": 26,
+    "total_fp": 14,
+    "per_class_recall": {
+      "D00": 17.65,
+      "D10": 0.0,
+      "D20": 61.29,
+      "D30": 36.36
+    },
+    "median_latency_ms": 10.28,
+    "peak_vram_mb": 56.33,
+    "avg_pixels_per_frame": 409600,
+    "avg_invocations_per_frame": 1.0
+  },
+  "5_full_adaptive_perception": {
+    "config": "5_full_adaptive_perception",
+    "precision": 80.0,
+    "recall": 40.68,
+    "f1": 53.93,
+    "small_defect_recall": 0.0,
+    "total_tp": 24,
+    "total_fp": 6,
+    "per_class_recall": {
+      "D00": 17.65,
+      "D10": 0.0,
+      "D20": 54.84,
+      "D30": 36.36
+    },
+    "median_latency_ms": 27.92,
+    "peak_vram_mb": 98.04,
+    "avg_pixels_per_frame": 966656,
+    "avg_invocations_per_frame": 1.36
+  }
+}

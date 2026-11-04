@@ -51,3 +51,4 @@ Per architectural specification, every system capability is categorized under on
    - Pavement texture classification is not an International Roughness Index profilometer. The system reports `VISUAL_ROUGHNESS_CLASS` and marks true IRI as `SENSOR_REQUIRED`.
 3. **Pothole Metric Geometry vs Relative Dimensions:**
    - Uncalibrated monocular cameras provide relative pixel area and ordinal depth displacement. Metric centimetres are only reported when `is_calibrated=True` with verified extrinsic/intrinsic parameters.
+

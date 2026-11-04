@@ -1,0 +1,43 @@
+{
+  "source": "Road.jpg",
+  "timestamp": "2026-11-05T02:01:49.639000",
+  "image_size": {
+    "width": 2400,
+    "height": 1604
+  },
+  "selected_mode": "depth",
+  "executed_modes_count": 1,
+  "capabilities": {
+    "depth": {
+      "mode": "depth",
+      "status": "success",
+      "model_name": "YOLO26n Monocular Depth Estimator",
+      "predictions": {
+        "measurement_type": "relative_monocular",
+        "depth_range": [
+          3.7036,
+          57.0365
+        ],
+        "depth_median": 9.3827,
+        "disclaimer": "Relative ordinal depth only. Calibrated metric depth requires stereo/LiDAR calibration."
+      },
+      "warnings": [],
+      "latency_ms": 162.24
+    }
+  },
+  "fusion": {
+    "overall_road_safety_risk": "LOW_RISK",
+    "fusion_confidence": 0.95,
+    "detected_hazards_count": 0,
+    "hazards": [],
+    "fusion_policy": "Explainable Rule-Based Evidence Arbiter (CYPhER Phase 7)"
+  },
+  "warnings": [],
+  "performance": {
+    "total_pipeline_latency_ms": 279.88,
+    "fps": 3.57,
+    "peak_gpu_memory_mb": 130.05,
+    "device": "cuda"
+  },
+  "visualization_path": "reports\\acceptance_tests\\cypher_Road_overlay.jpg"
+}

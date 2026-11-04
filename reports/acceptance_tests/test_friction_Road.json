@@ -1,0 +1,46 @@
+{
+  "source": "Road.jpg",
+  "timestamp": "2026-11-05T02:01:50.608682",
+  "image_size": {
+    "width": 2400,
+    "height": 1604
+  },
+  "selected_mode": "friction",
+  "executed_modes_count": 1,
+  "capabilities": {
+    "friction": {
+      "mode": "friction",
+      "status": "requires_sensor",
+      "model_name": "Sensor-Assisted Slip Risk Engine",
+      "predictions": {
+        "visual_slip_risk_estimate": "LOW_SLIP_RISK_HIGH_GRIP",
+        "estimated_condition": "Dry",
+        "sensor_telemetry_status": "ABSENT",
+        "required_telemetry": [
+          "wheel_speed",
+          "vehicle_speed",
+          "imu_acceleration",
+          "yaw_rate"
+        ],
+        "scientific_disclaimer": "RGB cameras estimate visual condition only. Direct numerical tyre-road friction coefficient (mu) requires wheel-slip telemetry."
+      },
+      "warnings": [],
+      "latency_ms": null
+    }
+  },
+  "fusion": {
+    "overall_road_safety_risk": "LOW_RISK",
+    "fusion_confidence": 0.95,
+    "detected_hazards_count": 0,
+    "hazards": [],
+    "fusion_policy": "Explainable Rule-Based Evidence Arbiter (CYPhER Phase 7)"
+  },
+  "warnings": [],
+  "performance": {
+    "total_pipeline_latency_ms": 23.55,
+    "fps": 42.47,
+    "peak_gpu_memory_mb": 119.81,
+    "device": "cuda"
+  },
+  "visualization_path": "reports\\acceptance_tests\\cypher_Road_overlay.jpg"
+}

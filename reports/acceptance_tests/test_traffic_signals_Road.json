@@ -1,0 +1,50 @@
+{
+  "source": "Road.jpg",
+  "timestamp": "2026-11-05T02:01:50.359273",
+  "image_size": {
+    "width": 2400,
+    "height": 1604
+  },
+  "selected_mode": "traffic_signals",
+  "executed_modes_count": 1,
+  "capabilities": {
+    "traffic_signals": {
+      "mode": "traffic_signals",
+      "status": "success",
+      "model_name": "YOLO26n + Crop HSV State Classifier",
+      "predictions": {
+        "traffic_light_count": 1,
+        "signals": [
+          {
+            "box": [
+              2189,
+              70,
+              2259,
+              221
+            ],
+            "signal_state": "AMBER",
+            "detection_conf": 0.309,
+            "state_conf": 0.85
+          }
+        ]
+      },
+      "warnings": [],
+      "latency_ms": 234.7
+    }
+  },
+  "fusion": {
+    "overall_road_safety_risk": "LOW_RISK",
+    "fusion_confidence": 0.95,
+    "detected_hazards_count": 0,
+    "hazards": [],
+    "fusion_policy": "Explainable Rule-Based Evidence Arbiter (CYPhER Phase 7)"
+  },
+  "warnings": [],
+  "performance": {
+    "total_pipeline_latency_ms": 286.12,
+    "fps": 3.5,
+    "peak_gpu_memory_mb": 152.58,
+    "device": "cuda"
+  },
+  "visualization_path": "reports\\acceptance_tests\\cypher_Road_overlay.jpg"
+}

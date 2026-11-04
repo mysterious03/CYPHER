@@ -1,0 +1,5 @@
+candidate,checkpoint,precision,recall,f1,mAP50,mAP50_95,D00_AP50,D10_AP50,D20_AP50,D40_AP50,D10_GT_count,D10_TP_conf025,D10_FP_conf025,D10_Recall_conf025,Total_FP_conf025,Small_Recall_conf025,Peak_VRAM_MB
+B0_baseline,runs/detect/runs/road_damage/B0_baseline/weights/best.pt,59.53,28.6,38.64,27.71,13.16,23.08,1.07,53.19,33.48,11,0,0,0.0,114,0.0,505.57
+B1A_sampling_only,runs/detect/runs/road_damage/B1A_sampling_only/weights/best.pt,7.44,12.13,9.22,3.31,0.88,2.15,0.0,7.55,3.53,11,0,0,0.0,0,0.0,523.87
+B1B_weighting_only,runs/detect/runs/road_damage/B1B_weighting_only/weights/best.pt,0.28,57.12,0.55,3.25,0.87,2.74,0.0,7.49,2.76,11,0,0,0.0,0,0.0,539.87
+B1C_augmentation_only,runs/detect/runs/road_damage/B1C_augmentation_only/weights/best.pt,2.17,23.9,3.97,3.36,0.86,1.61,0.0,9.25,2.6,11,0,0,0.0,0,0.0,523.89

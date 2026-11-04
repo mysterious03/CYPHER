@@ -1,0 +1,73 @@
+{
+  "source": "Road.jpg",
+  "timestamp": "2026-11-05T02:01:49.842017",
+  "image_size": {
+    "width": 2400,
+    "height": 1604
+  },
+  "selected_mode": "surface",
+  "executed_modes_count": 1,
+  "capabilities": {
+    "surface": {
+      "mode": "surface",
+      "status": "success",
+      "model_name": "Multi-Task Surface Classifier",
+      "predictions": {
+        "visual_surface_condition": {
+          "class_name": "Dry",
+          "confidence": 0.7063084840774536,
+          "all_probabilities": {
+            "Dry": 0.7063084840774536,
+            "Wet": 0.08017969876527786,
+            "Water-covered": 0.059743523597717285,
+            "Fresh snow": 0.05042466148734093,
+            "Melted snow": 0.049774475395679474,
+            "Ice-covered": 0.05356927961111069
+          }
+        },
+        "road_material": {
+          "class_name": "Asphalt",
+          "confidence": 0.736541211605072,
+          "all_probabilities": {
+            "Asphalt": 0.736541211605072,
+            "Concrete": 0.057790983468294144,
+            "Gravel": 0.04961427301168442,
+            "Dirt": 0.05125228315591812,
+            "Mud": 0.050543371587991714,
+            "Loose stone": 0.05425794795155525
+          }
+        },
+        "visual_unevenness": {
+          "class_name": "Smooth",
+          "confidence": 0.6340152621269226,
+          "all_probabilities": {
+            "Smooth": 0.6340152621269226,
+            "Slightly uneven": 0.1606896072626114,
+            "Severely uneven": 0.10843787342309952,
+            "Deteriorated": 0.0968572348356247
+          }
+        },
+        "estimated_tire_road_friction": null,
+        "physical_friction_disclaimer": "Physical tyre-road friction coefficient (mu) requires vehicle dynamics (wheel slip, lateral/longitudinal acceleration). RGB predictions indicate visual surface status only.",
+        "iri_roughness_disclaimer": "Visual unevenness category is not a certified International Roughness Index (IRI) measurement."
+      },
+      "warnings": [],
+      "latency_ms": 39.82
+    }
+  },
+  "fusion": {
+    "overall_road_safety_risk": "LOW_RISK",
+    "fusion_confidence": 0.95,
+    "detected_hazards_count": 0,
+    "hazards": [],
+    "fusion_policy": "Explainable Rule-Based Evidence Arbiter (CYPhER Phase 7)"
+  },
+  "warnings": [],
+  "performance": {
+    "total_pipeline_latency_ms": 179.25,
+    "fps": 5.58,
+    "peak_gpu_memory_mb": 113.66,
+    "device": "cuda"
+  },
+  "visualization_path": "reports\\acceptance_tests\\cypher_Road_overlay.jpg"
+}

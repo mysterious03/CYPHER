@@ -112,3 +112,4 @@ road_cv/
   2. Vehicle tracking lacks dedicated Indian auto-rickshaw categories and ByteTrack state integration.
   3. Video accident detection, lane marking segmentation, adverse weather classification, traffic signal state, and open-vocabulary obstacles need modular integration.
   4. Mode selection is scattered across standalone scripts rather than a single unified CLI and API.
+

@@ -44,3 +44,4 @@
    - All 19 hard-negative background patches were verified to originate from `Road.jpg` (an unlabelled external photo). Zero patches originate from the validation split.
 3. **No Heuristic Labeling Policy:**
    - All future training on Workstream C (Waterlogging) and Workstream D (Weather) strictly forbids synthetic threshold pseudo-masks. Only genuine human-annotated ground-truth labels are accepted.
+

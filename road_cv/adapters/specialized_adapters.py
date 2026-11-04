@@ -1,10 +1,18 @@
 """
-CYPhER Specialized Adapters
-Implements adapters for Accident Recognition, Weather, Lanes, Traffic Signals,
-Obstacles, Friction, Roughness, and Pothole Geometry.
+CYPhER V2.2 Specialized Perception Adapters
+Upgrades heuristic modes with dedicated neural models and zero-shot architectures:
+- AccidentAdapter: TemporalAccidentDetector with 16-frame 3D-CNN and trajectory anomaly checks
+- WeatherAdapter: MultiTaskWeatherClassifier (MobileNetV3-Small) with photometric verification
+- LaneAdapter: DedicatedLaneDetector (row-wise anchor polyline model)
+- TrafficSignalAdapter: Hybrid neural CNN + optical vertical thirds state classifier
+- ObstacleAdapter: OpenVocabularyObstacleDetector (YOLO-World zero-shot natural language prompts)
+- FrictionAdapter / RoughnessAdapter: Physical sensor safeguards
+- PotholeGeometryAdapter: Calibrated camera geometry and relative depth profiling
 """
 
+import os
 import time
+from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
 import cv2
 import numpy as np
@@ -15,13 +23,20 @@ from road_cv.adapters.base import BaseAdapter
 from road_cv.quality.condition_assessor import ConditionAssessor
 from road_cv.geometry.damage_assessor import GeometryDamageAssessor, CameraGeometryModel
 
+# Import V2.2 upgraded modules
+from road_cv.accident.temporal_accident_detector import TemporalAccidentDetector
+from road_cv.weather.weather_model import MultiTaskWeatherClassifier, WEATHER_CLASSES, LIGHTING_CLASSES
+from road_cv.lanes.lane_detector import DedicatedLaneDetector
+from road_cv.traffic_signals.signal_classifier import DedicatedTrafficSignalClassifier
+from road_cv.obstacles.open_vocabulary_obstacles import OpenVocabularyObstacleDetector, DEFAULT_OBSTACLE_PROMPTS
+
+
 class AccidentAdapter(BaseAdapter):
-    """Module 6: Video Accident and Collision Intelligence"""
+    """Module 6: Video Accident and Collision Intelligence (V2.2 Temporal 3D-CNN + Trajectory)"""
 
     def __init__(self):
         super().__init__(mode="accident", name="CYPhER Video Collision & Incident Engine")
-        self.frame_buffer = []
-        self.trajectory_history = {}
+        self.temporal_engine = TemporalAccidentDetector(buffer_size=16)
 
     def load(self, device: Optional[str] = None) -> bool:
         self.status = "READY"
@@ -31,125 +46,113 @@ class AccidentAdapter(BaseAdapter):
         t0 = time.perf_counter()
         vehicles = kwargs.get("vehicles", [])
         is_video = kwargs.get("is_video", False)
+        timestamp = kwargs.get("timestamp", time.time())
 
-        events = []
-        # Rule-based incident detection across tracked vehicles
-        for v in vehicles:
-            tid = v.get("track_id")
-            box = v.get("box", [0, 0, 0, 0])
-            cname = v.get("class_name", "vehicle")
-
-            # Check for vehicle rollover (aspect ratio inverted: width < height for cars)
-            w = box[2] - box[0]
-            h = box[3] - box[1]
-            if cname == "car" and h > 1.5 * w and h > 80:
-                events.append({
-                    "event_type": "vehicle_rollover_or_abnormal_orientation",
-                    "confidence": 0.78,
-                    "involved_track_id": tid,
-                    "verification_status": "SUSPECTED_INCIDENT",
-                    "box": box
-                })
-
-        # Inter-vehicle collision / severe overlap check
-        for i in range(len(vehicles)):
-            for j in range(i + 1, len(vehicles)):
-                b1 = vehicles[i]["box"]
-                b2 = vehicles[j]["box"]
-                # Compute IoU between vehicle boxes
-                ix1, iy1 = max(b1[0], b2[0]), max(b1[1], b2[1])
-                ix2, iy2 = min(b1[2], b2[2]), min(b1[3], b2[3])
-                iw, ih = max(0, ix2 - ix1), max(0, iy2 - iy1)
-                inter = iw * ih
-                a1 = (b1[2] - b1[0]) * (b1[3] - b1[1])
-                a2 = (b2[2] - b2[0]) * (b2[3] - b2[1])
-                iou = inter / max(1, a1 + a2 - inter)
-
-                if iou > 0.45:
-                    events.append({
-                        "event_type": "vehicle_collision_or_severe_impact",
-                        "confidence": round(float(iou), 2),
-                        "involved_track_ids": [vehicles[i].get("track_id"), vehicles[j].get("track_id")],
-                        "verification_status": "SUSPECTED_COLLISION",
-                        "overlap_iou": round(float(iou), 3)
-                    })
+        # Execute temporal / geometric anomaly detection
+        res = self.temporal_engine.analyze(
+            frame=frame,
+            detected_vehicles=vehicles,
+            timestamp=timestamp,
+            is_video=is_video
+        )
 
         latency = (time.perf_counter() - t0) * 1000.0
         return self.format_output(
             status="success",
-            predictions={
-                "incident_count": len(events),
-                "incidents": events,
-                "mode": "video_stream" if is_video else "single_frame"
-            },
+            predictions=res,
             latency_ms=latency
         )
 
 
 class WeatherAdapter(BaseAdapter):
-    """Module 7: Weather and Lighting Classification"""
+    """Module 7: Environmental Weather and Lighting Classification (V2.2 Multi-Task Neural Engine)"""
 
-    def __init__(self):
-        super().__init__(mode="weather", name="ConditionAssessor Environmental Engine")
+    def __init__(self, checkpoint: str = "runs/weather_classifier_v22/best_weather_model.pt"):
+        super().__init__(mode="weather", name="Multi-Task MobileNetV3 Weather Classifier")
+        self.checkpoint = checkpoint
         self.assessor = ConditionAssessor()
+        self.neural_model = None
 
     def load(self, device: Optional[str] = None) -> bool:
+        self.device = device or self.device
+        if Path(self.checkpoint).exists():
+            try:
+                ckpt = torch.load(self.checkpoint, map_location=self.device)
+                self.neural_model = MultiTaskWeatherClassifier(pretrained=False)
+                self.neural_model.load_state_dict(ckpt["state_dict"])
+                self.neural_model.to(self.device).eval()
+            except Exception as e:
+                print(f"[WeatherAdapter WARNING] Checkpoint load failed: {e}")
         self.status = "READY"
         return True
 
     def predict(self, frame: np.ndarray, **kwargs) -> Dict[str, Any]:
         t0 = time.perf_counter()
         road_mask = kwargs.get("road_mask", None)
-        metrics = self.assessor.assess_frame(frame, road_mask=road_mask)
+        optical_metrics = self.assessor.assess_frame(frame, road_mask=road_mask)
 
-        # Photometric & spectral heuristics for weather & lighting
-        mean_lum = metrics.get("mean_luminance", 128.0)
-        rms_contrast = metrics.get("rms_contrast", 40.0)
-        sharpness = metrics.get("sharpness_laplacian_var", 100.0)
-        glare = metrics.get("glare_ratio", 0.0)
+        # 1. Neural Prediction Path (if checkpoint loaded)
+        if self.neural_model is None:
+            self.load()
 
-        # Lighting condition
-        if mean_lum < 55.0:
-            lighting = "Nighttime"
-            l_conf = 0.92
-        elif mean_lum < 95.0:
-            lighting = "Dawn_Dusk"
-            l_conf = 0.81
+        if self.neural_model is not None:
+            resized = cv2.resize(frame, (224, 224))
+            rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+            t = torch.from_numpy(rgb).permute(2, 0, 1).float() / 255.0
+            t = t.unsqueeze(0).to(self.device)
+
+            with torch.no_grad():
+                w_logits, l_logits = self.neural_model(t)
+                w_probs = torch.softmax(w_logits, dim=-1)[0].cpu().numpy()
+                l_probs = torch.softmax(l_logits, dim=-1)[0].cpu().numpy()
+
+                w_idx = int(np.argmax(w_probs))
+                l_idx = int(np.argmax(l_probs))
+
+                weather = WEATHER_CLASSES[w_idx]
+                w_conf = float(w_probs[w_idx])
+                lighting = LIGHTING_CLASSES[l_idx]
+                l_conf = float(l_probs[l_idx])
+                method = "neural_mobilenet_v3"
         else:
-            lighting = "Daytime"
-            l_conf = 0.95
+            # 2. Photometric Optical Heuristic Fallback
+            mean_lum = optical_metrics.get("mean_luminance", 128.0)
+            rms_contrast = optical_metrics.get("rms_contrast", 40.0)
+            sharpness = optical_metrics.get("sharpness_laplacian_var", 100.0)
+            glare = optical_metrics.get("glare_ratio", 0.0)
 
-        # Weather condition
-        if sharpness < 35.0 and rms_contrast < 28.0:
-            weather = "Fog"
-            w_conf = 0.84
-        elif glare > 0.08 and mean_lum > 140.0:
-            weather = "Rain_or_Wet_Reflective"
-            w_conf = 0.79
-        elif rms_contrast < 32.0 and mean_lum > 100.0:
-            weather = "Overcast"
-            w_conf = 0.82
-        else:
-            weather = "Clear"
-            w_conf = 0.90
+            lighting = "Nighttime" if mean_lum < 55.0 else ("Dawn_Dusk" if mean_lum < 95.0 else "Daytime")
+            l_conf = 0.85
+            if sharpness < 35.0 and rms_contrast < 28.0:
+                weather = "Fog"
+            elif glare > 0.08 and mean_lum > 140.0:
+                weather = "Rain"
+            elif rms_contrast < 32.0 and mean_lum > 100.0:
+                weather = "Overcast"
+            else:
+                weather = "Clear"
+            w_conf = 0.85
+            method = "photometric_optical_fallback"
 
         latency = (time.perf_counter() - t0) * 1000.0
         predictions = {
             "predicted_weather": weather,
-            "weather_confidence": w_conf,
+            "weather_confidence": round(w_conf, 4),
             "lighting_condition": lighting,
-            "lighting_confidence": l_conf,
-            "optical_metrics": metrics
+            "lighting_confidence": round(l_conf, 4),
+            "method": method,
+            "optical_metrics": optical_metrics
         }
-
         return self.format_output(status="success", predictions=predictions, latency_ms=latency)
 
 
 class LaneAdapter(BaseAdapter):
-    """Module 8: Road Boundary and Lane Detection"""
+    """Module 8: Dedicated Lane & Polyline Boundary Detector (V2.2 Dedicated Polyline Engine)"""
 
-    def __init__(self):
-        super().__init__(mode="lanes", name="Road Boundary & Polyline Lane Model")
+    def __init__(self, checkpoint: str = "runs/lane_detector_v22/best_lane_model.pt"):
+        super().__init__(mode="lanes", name="Dedicated Polyline Lane Detector")
+        self.checkpoint = checkpoint
+        self.detector = DedicatedLaneDetector(checkpoint_path=self.checkpoint)
 
     def load(self, device: Optional[str] = None) -> bool:
         self.status = "READY"
@@ -157,65 +160,33 @@ class LaneAdapter(BaseAdapter):
 
     def predict(self, frame: np.ndarray, **kwargs) -> Dict[str, Any]:
         t0 = time.perf_counter()
-        h, w = frame.shape[:2]
         road_mask = kwargs.get("road_mask", None)
-
-        lanes = []
-        if road_mask is not None and np.any(road_mask == 0):
-            # Extract road mask edges
-            binary_road = (road_mask == 0).astype(np.uint8) * 255
-            contours, _ = cv2.findContours(binary_road, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if contours:
-                largest_c = max(contours, key=cv2.contourArea)
-                # Left and right bounds of drivable corridor
-                pts = largest_c.squeeze()
-                if len(pts.shape) == 2 and len(pts) > 10:
-                    left_pts = pts[pts[:, 0] < w // 2]
-                    right_pts = pts[pts[:, 0] >= w // 2]
-                    lanes.append({
-                        "lane_type": "left_road_edge",
-                        "point_count": len(left_pts),
-                        "confidence": 0.85
-                    })
-                    lanes.append({
-                        "lane_type": "right_road_edge",
-                        "point_count": len(right_pts),
-                        "confidence": 0.85
-                    })
-
-        # Fallback heuristic lane estimation
-        if not lanes:
-            lanes.append({"lane_type": "estimated_left_boundary", "confidence": 0.50})
-            lanes.append({"lane_type": "estimated_right_boundary", "confidence": 0.50})
-
+        res = self.detector.predict(frame, road_mask=road_mask)
         latency = (time.perf_counter() - t0) * 1000.0
-        return self.format_output(
-            status="success",
-            predictions={"lane_count": len(lanes), "lanes": lanes},
-            latency_ms=latency
-        )
+        return self.format_output(status="success", predictions=res.get("predictions", {}), latency_ms=latency)
 
 
 class TrafficSignalAdapter(BaseAdapter):
-    """Module 9: Traffic Light Detection and State (Red/Amber/Green/Unknown)"""
+    """Module 9: Traffic Light Detection & State Classifier (V2.2 Hybrid Neural + HSV)"""
 
-    def __init__(self, checkpoint: str = "yolo26n.pt"):
-        super().__init__(mode="traffic_signals", name="YOLO26n + Crop HSV State Classifier")
-        self.checkpoint = checkpoint
+    def __init__(self, detection_ckpt: str = "yolo26n.pt"):
+        super().__init__(mode="traffic_signals", name="YOLO26n + Dedicated State Classifier")
+        self.detection_ckpt = detection_ckpt
+        self.detector = None
+        self.classifier = DedicatedTrafficSignalClassifier()
 
     def load(self, device: Optional[str] = None) -> bool:
         self.device = device or self.device
-        self.model = YOLO(self.checkpoint)
+        self.detector = YOLO(self.detection_ckpt)
         self.status = "READY"
         return True
 
     def predict(self, frame: np.ndarray, **kwargs) -> Dict[str, Any]:
-        if self.model is None and not self.load():
-            return self.format_output(status="failed", predictions=[], warnings=["Model missing"])
+        if self.detector is None and not self.load():
+            return self.format_output(status="failed", predictions=[], warnings=["Detector missing"])
 
         t0 = time.perf_counter()
-        # COCO class 9 is traffic light
-        results = self.model.predict(frame, conf=0.25, classes=[9], device=self.device, verbose=False)[0]
+        results = self.detector.predict(frame, conf=0.25, classes=[9], device=self.device, verbose=False)[0]
 
         signals = []
         if results.boxes is not None and len(results.boxes) > 0:
@@ -225,40 +196,14 @@ class TrafficSignalAdapter(BaseAdapter):
             for b, cf in zip(boxes, confs):
                 x1, y1, x2, y2 = [max(0, int(v)) for v in b]
                 crop = frame[y1:y2, x1:x2]
-                state = "unknown_off"
-                state_conf = 0.50
-
-                if crop.size > 20:
-                    hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-                    # Check top third (red), middle third (amber), bottom third (green)
-                    ch = crop.shape[0]
-                    top = hsv[:int(ch*0.35), :]
-                    mid = hsv[int(ch*0.35):int(ch*0.65), :]
-                    bot = hsv[int(ch*0.65):, :]
-
-                    r_mask = ((top[:, :, 0] < 10) | (top[:, :, 0] > 170)) & (top[:, :, 1] > 100) & (top[:, :, 2] > 150)
-                    a_mask = (mid[:, :, 0] > 15) & (mid[:, :, 0] < 35) & (mid[:, :, 1] > 100) & (mid[:, :, 2] > 150)
-                    g_mask = (bot[:, :, 0] > 40) & (bot[:, :, 0] < 90) & (bot[:, :, 1] > 100) & (bot[:, :, 2] > 150)
-
-                    r_count = np.count_nonzero(r_mask)
-                    a_count = np.count_nonzero(a_mask)
-                    g_count = np.count_nonzero(g_mask)
-
-                    if r_count > 5 and r_count > max(a_count, g_count):
-                        state = "RED"
-                        state_conf = 0.88
-                    elif a_count > 5 and a_count > max(r_count, g_count):
-                        state = "AMBER"
-                        state_conf = 0.85
-                    elif g_count > 5 and g_count > max(r_count, a_count):
-                        state = "GREEN"
-                        state_conf = 0.89
+                state_res = self.classifier.classify_crop(crop)
 
                 signals.append({
                     "box": [x1, y1, x2, y2],
-                    "signal_state": state,
+                    "signal_state": state_res["state"],
+                    "state_confidence": state_res["confidence"],
                     "detection_conf": round(float(cf), 3),
-                    "state_conf": state_conf
+                    "method": state_res["method"]
                 })
 
         latency = (time.perf_counter() - t0) * 1000.0
@@ -270,57 +215,29 @@ class TrafficSignalAdapter(BaseAdapter):
 
 
 class ObstacleAdapter(BaseAdapter):
-    """Module 10: Open-Vocabulary Road Obstacle Detection"""
+    """Module 10: Open-Vocabulary Text-Prompted Obstacle Perception (V2.2 YOLO-World)"""
 
-    def __init__(self, checkpoint: str = "yolo26n.pt"):
-        super().__init__(mode="obstacles", name="Open-Vocabulary Road Obstacle Perception")
-        self.checkpoint = checkpoint
-        self.prompts = [
-            "fallen tree", "large rock", "road debris", "broken concrete",
-            "construction material", "fallen cargo", "tyre on road", "road barrier"
-        ]
+    def __init__(self):
+        super().__init__(mode="obstacles", name="YOLO-World Open-Vocabulary Obstacle Perception")
+        self.detector = OpenVocabularyObstacleDetector(
+            model_path="yolov8s-world.pt",
+            prompts=DEFAULT_OBSTACLE_PROMPTS
+        )
 
     def load(self, device: Optional[str] = None) -> bool:
-        self.device = device or self.device
-        self.model = YOLO(self.checkpoint)
         self.status = "READY"
         return True
 
     def predict(self, frame: np.ndarray, **kwargs) -> Dict[str, Any]:
-        if self.model is None and not self.load():
-            return self.format_output(status="failed", predictions=[], warnings=["Model missing"])
-
         t0 = time.perf_counter()
         road_mask = kwargs.get("road_mask", None)
+        custom_prompts = kwargs.get("prompts", None)
 
-        # Detect non-vehicle objects on road corridor (fire hydrant, bench, suitcase, etc.)
-        obstacle_classes = [10, 11, 13, 24, 25, 26, 28] # COCO objects that act as road debris
-        res = self.model.predict(frame, conf=0.20, classes=obstacle_classes, device=self.device, verbose=False)[0]
-
-        obstacles = []
-        if res.boxes is not None and len(res.boxes) > 0:
-            boxes = res.boxes.xyxy.cpu().numpy()
-            clss = res.boxes.cls.cpu().numpy().astype(int)
-            confs = res.boxes.conf.cpu().numpy()
-
-            for b, c, cf in zip(boxes, clss, confs):
-                x1, y1, x2, y2 = [int(v) for v in b]
-                cname = res.names.get(c, "road_obstacle")
-                obstacles.append({
-                    "category": cname,
-                    "confidence": round(float(cf), 3),
-                    "box": [x1, y1, x2, y2],
-                    "matched_prompt": "road debris / obstruction"
-                })
-
+        res = self.detector.predict(frame, road_mask=road_mask, custom_prompts=custom_prompts)
         latency = (time.perf_counter() - t0) * 1000.0
         return self.format_output(
             status="success",
-            predictions={
-                "obstacle_count": len(obstacles),
-                "obstacles": obstacles,
-                "supported_vocabulary": self.prompts
-            },
+            predictions=res,
             latency_ms=latency
         )
 
@@ -329,106 +246,7 @@ class FrictionAdapter(BaseAdapter):
     """Module 12: Sensor-Assisted Tyre-Road Friction Estimation"""
 
     def __init__(self):
-        super().__init__(mode="friction", name="Sensor-Assisted Slip Risk Engine")
-
-    def load(self, device: Optional[str] = None) -> bool:
-        self.status = "READY"
-        return True
-
-    def predict(self, frame: np.ndarray, **kwargs) -> Dict[str, Any]:
-        surface_pred = kwargs.get("surface", {})
-        sensor_data = kwargs.get("sensors", None)
-
-        # Scientific honesty check
-        if sensor_data is None:
-            # Map visual wetness to qualitative risk only
-            fric_class = surface_pred.get("visual_surface_condition", {}).get("class_name", "Dry")
-            risk_map = {
-                "Dry": "LOW_SLIP_RISK_HIGH_GRIP",
-                "Wet": "MODERATE_SLIP_RISK",
-                "Water-covered": "HIGH_HYDROPLANING_RISK",
-                "Fresh snow": "HIGH_SLIP_RISK",
-                "Melted snow": "VERY_HIGH_SLIP_RISK",
-                "Ice-covered": "CRITICAL_SLIP_DANGER"
-            }
-            risk = risk_map.get(fric_class, "UNKNOWN_RISK")
-
-            return self.format_output(
-                status="requires_sensor",
-                predictions={
-                    "visual_slip_risk_estimate": risk,
-                    "estimated_condition": fric_class,
-                    "sensor_telemetry_status": "ABSENT",
-                    "required_telemetry": ["wheel_speed", "vehicle_speed", "imu_acceleration", "yaw_rate"],
-                    "scientific_disclaimer": "RGB cameras estimate visual condition only. Direct numerical tyre-road friction coefficient (mu) requires wheel-slip telemetry."
-                }
-            )
-
-        # If sensor telemetry is supplied
-        v_speed = sensor_data.get("vehicle_speed_kmh", 50.0)
-        w_speed = sensor_data.get("wheel_speed_kmh", 50.0)
-        slip_ratio = abs(v_speed - w_speed) / max(1.0, v_speed)
-        estimated_mu = max(0.1, min(0.9, 0.85 - slip_ratio * 1.5))
-
-        return self.format_output(
-            status="success",
-            predictions={
-                "calibrated_friction_mu": round(float(estimated_mu), 3),
-                "slip_ratio": round(float(slip_ratio), 4),
-                "sensor_telemetry_status": "SYNCHRONIZED"
-            }
-        )
-
-
-class RoughnessAdapter(BaseAdapter):
-    """Module 13: Sensor-Assisted Road Roughness & IRI"""
-
-    def __init__(self):
-        super().__init__(mode="roughness", name="Visual Roughness & Sensor IRI Engine")
-
-    def load(self, device: Optional[str] = None) -> bool:
-        self.status = "READY"
-        return True
-
-    def predict(self, frame: np.ndarray, **kwargs) -> Dict[str, Any]:
-        surface_pred = kwargs.get("surface", {})
-        sensor_data = kwargs.get("sensors", None)
-
-        if sensor_data is None:
-            unevenness = surface_pred.get("visual_unevenness", {}).get("class_name", "Smooth")
-            return self.format_output(
-                status="requires_sensor",
-                predictions={
-                    "visual_roughness_class": unevenness,
-                    "iri_m_per_km": None,
-                    "sensor_telemetry_status": "ABSENT",
-                    "required_sensors": ["accelerometer_vertical", "vehicle_speed", "sampling_rate_hz"],
-                    "scientific_disclaimer": "Visual unevenness is a surface texture classification. Standard International Roughness Index (IRI m/km) requires vertical accelerometer profile."
-                }
-            )
-
-        vert_accel = sensor_data.get("vertical_acceleration_rms", 0.5)
-        v_speed = sensor_data.get("vehicle_speed_kmh", 50.0)
-        est_iri = max(1.0, min(12.0, vert_accel * (60.0 / max(10.0, v_speed)) * 3.5))
-
-        return self.format_output(
-            status="success",
-            predictions={
-                "calibrated_iri_m_per_km": round(float(est_iri), 2),
-                "roughness_rating": "GOOD" if est_iri < 2.7 else ("FAIR" if est_iri < 4.5 else "POOR"),
-                "sensor_telemetry_status": "SYNCHRONIZED"
-            }
-        )
-
-
-class PotholeGeometryAdapter(BaseAdapter):
-    """Module 14: Calibrated Pothole Dimensions and Depth"""
-
-    def __init__(self):
-        super().__init__(mode="pothole_geometry", name="Pothole Geometric Assessor")
-        self.assessor = GeometryDamageAssessor(
-            CameraGeometryModel(camera_height_m=1.35, pitch_angle_deg=8.0, is_calibrated=False)
-        )
+        super().__init__(mode="friction", name="Vision-Assisted Slip Risk Estimator")
 
     def load(self, device: Optional[str] = None) -> bool:
         self.status = "READY"
@@ -436,34 +254,153 @@ class PotholeGeometryAdapter(BaseAdapter):
 
     def predict(self, frame: np.ndarray, **kwargs) -> Dict[str, Any]:
         t0 = time.perf_counter()
-        damage_preds = kwargs.get("damage", [])
+        sensors = kwargs.get("sensors", None)
+        surface_pred = kwargs.get("surface", {})
+
+        condition = "Dry"
+        if isinstance(surface_pred, dict) and "visual_surface_condition" in surface_pred:
+            cond_data = surface_pred["visual_surface_condition"]
+            if isinstance(cond_data, dict):
+                condition = cond_data.get("class_name", "Dry")
+            elif isinstance(cond_data, str):
+                condition = cond_data
+
+        risk_level = "LOW"
+        if condition in ["Wet"]:
+            risk_level = "MEDIUM"
+        elif condition in ["Water-covered", "Melted snow", "Ice-covered", "Mud"]:
+            risk_level = "HIGH"
+
+        status_flag = "success" if sensors is not None else "requires_sensor"
+        predictions = {
+            "visual_slip_risk_estimate": risk_level,
+            "visual_surface_condition": condition,
+            "measured_friction_mu": None if sensors is None else sensors.get("wheel_slip_friction_mu", 0.72),
+            "sensor_telemetry_provided": sensors is not None,
+            "scientific_disclaimer": (
+                "True physical tire-road friction coefficient mu requires wheel speed encoders, "
+                "chassis accelerometers, and powertrain torque data. Single-camera RGB provides visual slip risk only."
+            )
+        }
+        latency = (time.perf_counter() - t0) * 1000.0
+        return self.format_output(status=status_flag, predictions=predictions, latency_ms=latency)
+
+
+class RoughnessAdapter(BaseAdapter):
+    """Module 13: Sensor-Assisted Road Roughness & IRI Class"""
+
+    def __init__(self):
+        super().__init__(mode="roughness", name="Vision-Assisted Roughness Estimator")
+
+    def load(self, device: Optional[str] = None) -> bool:
+        self.status = "READY"
+        return True
+
+    def predict(self, frame: np.ndarray, **kwargs) -> Dict[str, Any]:
+        t0 = time.perf_counter()
+        sensors = kwargs.get("sensors", None)
+        surface_pred = kwargs.get("surface", {})
+
+        roughness_class = "Smooth"
+        if isinstance(surface_pred, dict) and "visual_unevenness" in surface_pred:
+            u_data = surface_pred["visual_unevenness"]
+            if isinstance(u_data, dict):
+                roughness_class = u_data.get("class_name", "Smooth")
+            elif isinstance(u_data, str):
+                roughness_class = u_data
+
+        status_flag = "success" if sensors is not None else "requires_sensor"
+        predictions = {
+            "visual_roughness_class": roughness_class,
+            "iri_m_per_km": None if sensors is None else sensors.get("quarter_car_iri_m_per_km", 2.1),
+            "sensor_telemetry_provided": sensors is not None,
+            "scientific_disclaimer": (
+                "International Roughness Index (IRI m/km) requires vertical accelerometer integration "
+                "measuring vehicle chassis oscillation. Single-camera RGB estimates visual unevenness texture only."
+            )
+        }
+        latency = (time.perf_counter() - t0) * 1000.0
+        return self.format_output(status=status_flag, predictions=predictions, latency_ms=latency)
+
+
+class PotholeGeometryAdapter(BaseAdapter):
+    """Module 14: Calibrated Pothole Dimensions and Volumetric Depth"""
+
+    def __init__(self):
+        super().__init__(mode="pothole_geometry", name="Calibrated Pothole Geometry Profiler")
+        self.assessor = GeometryDamageAssessor()
+
+    def load(self, device: Optional[str] = None) -> bool:
+        self.status = "READY"
+        return True
+
+    def predict(self, frame: np.ndarray, **kwargs) -> Dict[str, Any]:
+        t0 = time.perf_counter()
+        damage_list = kwargs.get("damage", [])
         depth_map = kwargs.get("depth_map", None)
         calibration = kwargs.get("calibration", None)
 
-        is_calibrated = (calibration is not None and calibration.get("is_calibrated", False))
-        if is_calibrated:
-            self.assessor.camera_model.is_calibrated = True
-            self.assessor.camera_model.camera_height_m = calibration.get("camera_height_m", 1.35)
-            self.assessor.camera_model.pitch_rad = np.radians(calibration.get("pitch_angle_deg", 8.0))
+        potholes = [d for d in damage_list if "D40" in str(d.get("class_name", "")) or "pothole" in str(d.get("class_name", "")).lower()]
 
-        pothole_geometries = []
-        for det in damage_preds:
-            cname = det.get("class_name", "")
-            if "pothole" in cname.lower() or "d40" in cname.lower():
-                box = det["box"]
-                geom = self.assessor.assess_defect(box, class_name="D40_pothole", depth_map=depth_map)
-                pothole_geometries.append(geom)
+        if calibration is None:
+            # Uncalibrated relative measurements
+            rel_measurements = []
+            for p in potholes:
+                b = p["box"]
+                bw = b[2] - b[0]
+                bh = b[3] - b[1]
+                aspect = bw / max(1, bh)
 
-        latency = (time.perf_counter() - t0) * 1000.0
-        status_val = "success" if is_calibrated else "requires_calibration"
+                depth_stat = 0.5
+                if depth_map is not None:
+                    cx = int((b[0] + b[2]) / 2)
+                    cy = int((b[1] + b[3]) / 2)
+                    if 0 <= cy < depth_map.shape[0] and 0 <= cx < depth_map.shape[1]:
+                        depth_stat = float(depth_map[cy, cx])
 
-        return self.format_output(
-            status=status_val,
-            predictions={
-                "pothole_count": len(pothole_geometries),
-                "measurements": pothole_geometries,
-                "calibration_state": "CALIBRATED_METRIC" if is_calibrated else "UNCALIBRATED_RELATIVE",
-                "scientific_disclaimer": "Metric cm dimensions are only valid under verified camera extrinsic/intrinsic calibration."
-            },
-            latency_ms=latency
-        )
+                rel_measurements.append({
+                    "box": b,
+                    "relative_width_px": bw,
+                    "relative_aspect_ratio": round(aspect, 2),
+                    "relative_depth_gradient": round(depth_stat, 3),
+                    "metric_dimensions_available": False
+                })
+
+            latency = (time.perf_counter() - t0) * 1000.0
+            return self.format_output(
+                status="requires_calibration",
+                predictions={
+                    "calibration_state": "UNCALIBRATED_RELATIVE",
+                    "pothole_count": len(rel_measurements),
+                    "potholes": rel_measurements,
+                    "scientific_disclaimer": (
+                        "Camera focal length, mount height, and pitch angle are required to calculate "
+                        "metric dimensions (cm, m). Reporting uncalibrated relative dimensions."
+                    )
+                },
+                latency_ms=latency
+            )
+        else:
+            # Calibrated metric measurements
+            metric_results = []
+            cam_model = CameraGeometryModel(
+                focal_length_px=calibration.get("focal_length_px", 1000.0),
+                camera_height_m=calibration.get("camera_height_m", 1.4),
+                pitch_angle_deg=calibration.get("pitch_angle_deg", 5.0)
+            )
+
+            for p in potholes:
+                b = p["box"]
+                dim = self.assessor.estimate_pothole_dimensions_calibrated(b, depth_map, cam_model)
+                metric_results.append(dim)
+
+            latency = (time.perf_counter() - t0) * 1000.0
+            return self.format_output(
+                status="success",
+                predictions={
+                    "calibration_state": "CALIBRATED_METRIC",
+                    "pothole_count": len(metric_results),
+                    "potholes": metric_results
+                },
+                latency_ms=latency
+            )

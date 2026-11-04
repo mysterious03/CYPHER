@@ -3,7 +3,7 @@
 
 system:
   project_name: "CYPhER Road Perception & Hazard Intelligence System"
-  version: "2.0.0"
+  version: "2.2.0"
   device: "cuda"
   max_vram_gb: 6.0
   safety_headroom_gb: 1.0
@@ -14,7 +14,7 @@ models:
     name: "Custom YOLO26n Road Damage Detector"
     task: "detect"
     architecture: "YOLO26n"
-    checkpoint: "runs/detect/runs/road_damage/B0_baseline/weights/best.pt"
+    checkpoint: "runs/detect/road_damage_v22/weights/best.pt"
     classes:
       0: "D00_longitudinal_crack"
       1: "D10_transverse_crack"
@@ -90,7 +90,9 @@ models:
       3: "specular_wet_reflection"
     input_size: [512, 512]
     default_conf: 0.40
-    status: "TRAINING_REQUIRED"
+    status: "DATASET_REQUIRED" # Checkpoint trained on heuristic pseudo-masks; authentic pixel dataset required
+    metrics:
+      training_source: "heuristic_pseudo_masks"
 
   depth:
     id: "M6_MONOCULAR_DEPTH"
@@ -119,25 +121,30 @@ models:
     status: "IMPLEMENTED_AND_TRAINED"
     metrics:
       mean_accuracy: 97.89
+      friction_accuracy: 98.67
+      material_accuracy: 100.00
+      unevenness_accuracy: 95.00
+      note: "Extreme holdout class imbalance towards Dry/Smooth"
 
   accident:
     id: "M8_ACCIDENT_INTELLIGENCE"
     name: "Temporal Video Accident & Anomaly Engine"
-    task: "video_classification"
-    architecture: "Temporal Trajectory Anomaly + Video Classifier"
+    task: "video_action_recognition"
+    architecture: "16-Frame Spatio-Temporal 3D-CNN + Trajectory Tracking"
     classes:
       0: "normal_traffic"
       1: "hard_braking_near_miss"
       2: "vehicle_collision"
-      3: "vehicle_rollover"
-    input_frames: 16
-    status: "EXPERIMENTAL"
+      3: "vehicle_rollover_or_jackknife"
+    status: "IMPLEMENTED_BUT_UNTRAINED"
+    annotation: "DATASET_REQUIRED: Trajectory heuristics active; 3D-CNN awaiting video crash dataset"
 
   weather:
     id: "M9_WEATHER_CLASSIFIER"
-    name: "Environmental Condition & Adverse Weather Engine"
+    name: "Multi-Task Environmental Weather & Lighting Classifier"
     task: "classification"
-    architecture: "ConditionAssessor + MobileNetV3-Small"
+    architecture: "MobileNetV3-Small Dual-Head"
+    checkpoint: "runs/weather_classifier_v22/best_weather_model.pt"
     classes:
       weather: ["Clear", "Rain", "Fog", "Snow", "Overcast"]
       lighting: ["Daytime", "Nighttime", "Dawn_Dusk"]
@@ -145,42 +152,49 @@ models:
 
   lanes:
     id: "M10_LANE_DETECTION"
-    name: "Drivable Corridor & Lane Marking Model"
+    name: "Dedicated Polyline Lane & Marking Detector"
     task: "lane_detection"
-    architecture: "Road Boundary Extraction + Polyline Fitter"
+    architecture: "MobileNetV3 Row-wise Anchor Polyline Model"
+    checkpoint: "runs/lane_detector_v22/best_lane_model.pt"
     classes:
-      0: "left_lane_boundary"
-      1: "right_lane_boundary"
-      2: "center_line"
-    status: "EXPERIMENTAL"
+      0: "solid_white"
+      1: "dashed_white"
+      2: "solid_yellow"
+      3: "double_yellow"
+      4: "unmarked_edge"
+    status: "IMPLEMENTED_AND_TRAINED"
 
   traffic_signals:
     id: "M11_TRAFFIC_SIGNALS"
-    name: "Traffic Signal Detection & State Classifier"
+    name: "Traffic Signal Detection & Hybrid State Classifier"
     task: "detection_and_classification"
-    architecture: "YOLO26n + Crop HSV State Classifier"
+    architecture: "YOLO26n Box + Patch CNN Classifier with Optical HSV Fallback"
+    checkpoint: "runs/traffic_signals_v22/best_signal_model.pt"
     classes:
       0: "red"
       1: "amber_yellow"
       2: "green"
-      3: "unknown_off"
-    status: "PRETRAINED_INTEGRATED"
+      3: "unknown_or_off"
+    status: "IMPLEMENTED_AND_TRAINED"
 
   obstacles:
     id: "M12_OBSTACLES"
-    name: "Open-Vocabulary Road Obstacle Perception"
+    name: "Open-Vocabulary Zero-Shot Road Obstacle Perception"
     task: "open_vocabulary_detection"
-    architecture: "Zero-Shot Text Prompt Detector"
+    architecture: "YOLO-World (yolov8s-world.pt) Text-Prompted Model"
+    checkpoint: "yolov8s-world.pt"
     prompts:
       - "fallen tree"
       - "large rock"
+      - "boulder on road"
       - "road debris"
       - "broken concrete"
-      - "construction material"
-      - "fallen cargo"
+      - "spilled cargo"
       - "tyre on road"
-      - "road barrier"
-    status: "EXPERIMENTAL"
+      - "construction material"
+      - "traffic barrier"
+      - "road obstruction"
+    status: "PRETRAINED_INTEGRATED"
 
   friction:
     id: "M13_FRICTION_ESTIMATE"
@@ -204,4 +218,5 @@ models:
     task: "geometric_measurement"
     output_type: "RELATIVE_DIMENSIONS_AND_DEPTH"
     calibration_requirements: ["camera_height_m", "pitch_angle_deg", "focal_length_px", "intrinsic_matrix"]
-    status: "EXPERIMENTAL"
+    status: "CALIBRATION_REQUIRED"
+

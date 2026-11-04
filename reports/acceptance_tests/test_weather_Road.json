@@ -1,0 +1,52 @@
+{
+  "source": "Road.jpg",
+  "timestamp": "2026-11-05T02:01:50.035419",
+  "image_size": {
+    "width": 2400,
+    "height": 1604
+  },
+  "selected_mode": "weather",
+  "executed_modes_count": 1,
+  "capabilities": {
+    "weather": {
+      "mode": "weather",
+      "status": "success",
+      "model_name": "ConditionAssessor Environmental Engine",
+      "predictions": {
+        "predicted_weather": "Clear",
+        "weather_confidence": 0.9,
+        "lighting_condition": "Daytime",
+        "lighting_confidence": 0.95,
+        "optical_metrics": {
+          "primary_condition": "daylight_normal",
+          "condition_tags": [],
+          "metrics": {
+            "mean_luminance": 120.15,
+            "dynamic_range": 116.0,
+            "rms_contrast": 50.01,
+            "sharpness_laplacian": 111.63,
+            "glare_ratio": 0.0426,
+            "shadow_ratio": 0.053
+          }
+        }
+      },
+      "warnings": [],
+      "latency_ms": 96.12
+    }
+  },
+  "fusion": {
+    "overall_road_safety_risk": "LOW_RISK",
+    "fusion_confidence": 0.95,
+    "detected_hazards_count": 0,
+    "hazards": [],
+    "fusion_policy": "Explainable Rule-Based Evidence Arbiter (CYPhER Phase 7)"
+  },
+  "warnings": [],
+  "performance": {
+    "total_pipeline_latency_ms": 118.85,
+    "fps": 8.41,
+    "peak_gpu_memory_mb": 100.35,
+    "device": "cuda"
+  },
+  "visualization_path": "reports\\acceptance_tests\\cypher_Road_overlay.jpg"
+}

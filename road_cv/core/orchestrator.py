@@ -253,3 +253,4 @@ class CYPhEROrchestrator:
         cv2.putText(vis, hud_text, (15, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.7, risk_color, 2)
 
         return vis
+
