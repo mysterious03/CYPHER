@@ -1,0 +1,78 @@
+# CYPhER Common Indian Road Perception Benchmark Configuration
+# Defines multi-task annotation schemas, split policies, and environment categories
+
+dataset:
+  name: "CYPhER Common Indian Road Benchmark (CIRB)"
+  root: "data/cypher_indian_road"
+  version: "1.0.0"
+
+environments:
+  - "chennai_urban_arterial"
+  - "nh44_national_highway"
+  - "state_highway_intercity"
+  - "rural_village_paved"
+  - "rural_unpaved_dirt"
+  - "crowded_junction_market"
+  - "monsoon_waterlogged"
+  - "nighttime_low_illumination"
+
+tasks:
+  damage_detection:
+    format: "yolo_v8_detection"
+    classes: ["D00_longitudinal_crack", "D10_transverse_crack", "D20_alligator_crack", "D40_pothole"]
+    annotation_dir: "annotations/damage_bboxes"
+
+  surface_classification:
+    format: "multi_task_json"
+    heads:
+      friction: ["Dry", "Wet", "Water-covered", "Fresh snow", "Melted snow", "Ice-covered"]
+      material: ["Asphalt", "Concrete", "Gravel", "Dirt", "Mud", "Loose stone"]
+      unevenness: ["Smooth", "Slightly uneven", "Severely uneven", "Deteriorated"]
+    annotation_dir: "annotations/surface_conditions"
+
+  vehicle_participant_detection:
+    format: "yolo_v8_segmentation_or_bbox"
+    classes:
+      - "car"
+      - "motorcycle"
+      - "auto_rickshaw"
+      - "e_rickshaw"
+      - "bus"
+      - "truck"
+      - "tractor"
+      - "bicycle"
+      - "person"
+      - "rider"
+      - "animal"
+    annotation_dir: "annotations/vehicle_participants"
+
+  lane_boundary_detection:
+    format: "row_anchor_polylines"
+    classes: ["solid_white", "dashed_white", "solid_yellow", "double_yellow", "unmarked_edge"]
+    annotation_dir: "annotations/lane_polylines"
+
+  traffic_signals:
+    format: "bbox_and_state"
+    states: ["red", "amber_yellow", "green", "unknown_or_off"]
+    annotation_dir: "annotations/traffic_signals"
+
+  open_vocabulary_obstacles:
+    format: "bbox_with_text_prompt"
+    prompts:
+      - "fallen tree"
+      - "rock"
+      - "boulder"
+      - "road debris"
+      - "broken concrete"
+      - "construction material"
+      - "spilled cargo"
+      - "tyre on road"
+      - "animal obstruction"
+    annotation_dir: "annotations/obstacles"
+
+splits:
+  policy: "sequence_and_location_disjoint"
+  train_manifest: "splits/train.txt"
+  val_manifest: "splits/val.txt"
+  heldout_test_manifest: "splits/test_heldout.txt"
+  adverse_conditions_manifest: "splits/test_adverse_conditions.txt"

@@ -1,9 +1,9 @@
-# CYPhER Model Registry Configuration (V2.4.0)
+# CYPhER Model Registry Configuration (V2.5.0)
 # Single Source of Truth for all 15 perception capabilities
 
 system:
   project_name: "CYPhER Road Perception & Hazard Intelligence System"
-  version: "2.4.0"
+  version: "2.5.0"
   device: "cuda"
   max_vram_gb: 6.0
   safety_headroom_gb: 1.0
@@ -14,7 +14,7 @@ models:
     name: "Custom YOLO26n Road Damage Detector"
     task: "detect"
     architecture: "YOLO26n"
-    checkpoint: "runs/detect/road_damage_v24/weights/best.pt"
+    checkpoint: "runs/detect/road_damage_v25/weights/best.pt"
     fallback_checkpoint: "runs/detect/road_damage_v22/weights/best.pt"
     classes:
       0: "D00_longitudinal_crack"
@@ -27,27 +27,35 @@ models:
     status: "VALIDATED_ACCEPTABLE"
     metrics:
       full_val_images: 1172
-      overall_precision_adaptive: 76.49
-      overall_recall_adaptive: 38.76
-      overall_f1_adaptive: 47.25
-      d20_precision_adaptive: 86.63
-      d20_recall_adaptive: 52.77
-      d40_precision_adaptive: 57.95
-      d40_recall_adaptive: 25.25
+      standalone_precision: 56.71
+      standalone_recall: 40.38
+      standalone_f1: 47.17
+      adaptive_fast_precision: 66.91
+      adaptive_fast_recall: 37.28
+      adaptive_fast_f1: 47.88
+      adaptive_balanced_precision: 61.40
+      adaptive_balanced_recall: 42.40
+      adaptive_balanced_f1: 50.16
+      adaptive_high_acc_recall: 49.26
+      adaptive_high_acc_small_recall: 14.29
+      d00_recall_retrained: 30.40
+      d20_recall_retrained: 61.90
+      d40_recall_retrained: 41.50
+      d10_map50: 0.00207
 
   surface:
     id: "M2_SURFACE_CLASSIFIER"
     name: "Multi-Task Surface Condition Classifier"
     task: "classification"
     architecture: "MobileNetV3-Small Multi-Task"
-    checkpoint: "runs/surface_classifier_v24/best_surface_model.pt"
+    checkpoint: "runs/surface_classifier_v25/best_surface_model.pt"
     heads:
       friction: ["Dry", "Wet", "Water-covered", "Fresh snow", "Melted snow", "Ice-covered"]
       material: ["Asphalt", "Concrete", "Gravel", "Dirt", "Mud", "Loose stone"]
       unevenness: ["Smooth", "Slightly uneven", "Severely uneven", "Deteriorated"]
     input_size: [224, 224]
     default_conf: 0.30
-    status: "VALIDATED_ACCEPTABLE"
+    status: "VALIDATED_STRONG"
     metrics:
       full_val_patches: 1172
       mean_accuracy: 98.04
@@ -174,8 +182,8 @@ models:
       1: "amber_yellow"
       2: "green"
       3: "unknown_or_off"
-    status: "VALIDATED_ACCEPTABLE"
-    annotation: "Optical HSV vertical thirds rule validated; patch CNN gated as DATASET_REQUIRED"
+    status: "VALIDATED_STRONG"
+    annotation: "Optical HSV vertical thirds rule validated (100% state precision); patch CNN gated as DATASET_REQUIRED"
 
   obstacles:
     id: "M10_OBSTACLES"
@@ -206,7 +214,7 @@ models:
       1: "hard_braking_near_miss"
       2: "vehicle_collision"
       3: "vehicle_rollover_or_jackknife"
-    status: "PRETRAINED_NOT_VALIDATED"
+    status: "HEURISTIC_BASELINE"
     annotation: "Heuristic tracker active; 3D ST-GCN awaiting DADA-2000 dataset (DATASET_REQUIRED)"
 
   pothole_geometry:

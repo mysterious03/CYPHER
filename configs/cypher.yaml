@@ -1,7 +1,7 @@
-# CYPhER Master Application Configuration (v2.4.0)
+# CYPhER Master Application Configuration (v2.5.0)
 system:
   name: "CYPhER Multi-Model Road Perception System"
-  version: "2.4.0"
+  version: "2.5.0"
   device: "cuda" # cuda or cpu
   max_vram_gb: 6.0
   safety_headroom_gb: 1.0

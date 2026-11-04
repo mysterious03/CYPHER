@@ -1,0 +1,6 @@
+Configuration,Precision (%),Recall (%),F1 (%),TP,FP,FN,D00 Recall (%),D10 Recall (%),D20 Recall (%),D40 Recall (%),Small Recall (%),Medium Recall (%),Large Recall (%),Median Latency (ms),FPS,Peak VRAM (MB)
+B0 Baseline (Single Scale 640x640),59.49,28.26,38.32,210,143,533,12.11,0.0,46.25,20.3,0.0,11.84,36.02,11.48,87.1,56.34
+V2.4 Retrained (D10 Copy-Paste),56.71,40.38,47.17,300,229,443,26.91,0.0,55.37,34.65,0.0,25.88,47.44,11.32,88.4,66.44
+Adaptive FAST Profile,66.91,37.28,47.88,277,137,466,24.22,0.0,51.79,31.68,0.0,21.93,44.69,28.9,34.6,107.29
+Adaptive BALANCED Profile,61.4,42.4,50.16,315,198,428,29.6,0.0,57.0,36.63,0.0,27.63,49.61,109.2,9.2,107.29
+Adaptive HIGH_ACCURACY Profile,49.66,49.26,49.46,366,371,377,35.87,0.0,62.21,47.03,14.29,36.4,55.51,128.79,7.8,107.26

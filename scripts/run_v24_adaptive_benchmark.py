@@ -121,7 +121,7 @@ def evaluate_detector(model, name: str, is_pipeline=False, profile="balanced"):
 
     # Reset GPU memory stats
     if torch.cuda.is_available():
-        torch.cuda.reset_peak_memory_stats(0)
+        torch.cuda.reset_peak_memory_stats()
 
     # Warmup
     dummy = np.zeros((640, 640, 3), dtype=np.uint8)
@@ -146,7 +146,7 @@ def evaluate_detector(model, name: str, is_pipeline=False, profile="balanced"):
             res = model.run_adaptive_inference(img, profile=profile)
             for det in res["detections"]:
                 preds.append({
-                    "box": det["bbox"],
+                    "box": [int(x) for x in det.get("box", det.get("bbox"))],
                     "conf": det["confidence"],
                     "cls": det["class_id"]
                 })
@@ -209,7 +209,7 @@ def evaluate_detector(model, name: str, is_pipeline=False, profile="balanced"):
 
     peak_vram = 0.0
     if torch.cuda.is_available():
-        peak_vram = torch.cuda.max_memory_allocated(0) / (1024**2)
+        peak_vram = torch.cuda.max_memory_allocated() / (1024**2)
 
     res_summary = {
         "configuration": name,
