@@ -3,7 +3,7 @@
 
 system:
   project_name: "CYPhER Road Perception & Hazard Intelligence System"
-  version: "2.3.0"
+  version: "2.3.1"
   device: "cuda"
   max_vram_gb: 6.0
   safety_headroom_gb: 1.0
@@ -121,24 +121,26 @@ models:
     name: "Multi-Task Surface Condition Classifier"
     task: "classification"
     architecture: "MobileNetV3-Large Multi-Task"
-    checkpoint: "runs/surface_classifier/best_surface_model.pt"
+    checkpoint: "runs/surface_classifier_v231/exp4_effective_number/best_model.pt"
     heads:
       friction: ["Dry", "Wet", "Water-covered", "Fresh snow", "Melted snow", "Ice-covered"]
       material: ["Asphalt", "Concrete", "Gravel", "Dirt", "Mud", "Loose stone"]
       unevenness: ["Smooth", "Slightly uneven", "Severely uneven", "Deteriorated"]
     input_size: [224, 224]
     default_conf: 0.30
-    status: "VALIDATED_WEAK"
+    status: "VALIDATED_ACCEPTABLE"
     metrics:
       full_val_patches: 1172
-      mean_accuracy: 97.90
-      friction_accuracy: 99.32
-      friction_macro_f1: 49.83
+      mean_accuracy: 98.04
+      friction_balanced_accuracy: 98.58
+      friction_macro_f1: 65.61
+      wet_recall: 100.00
       material_accuracy: 100.00
       material_macro_f1: 100.00
-      unevenness_accuracy: 94.37
-      unevenness_macro_f1: 48.55
-      note: "Extreme holdout class imbalance towards Dry/Smooth causes 0.0% recall on wet and uneven patches"
+      unevenness_balanced_accuracy: 96.95
+      unevenness_macro_f1: 88.20
+      uneven_recall: 96.97
+      training_strategy: "Effective-Number Class Weighting (beta=0.999)"
 
   accident:
     id: "M8_ACCIDENT_INTELLIGENCE"

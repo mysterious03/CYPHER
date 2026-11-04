@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-11-05T03:12:12",
+  "hardware": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "images_evaluated": 100,
+  "vehicle_segmentation_m4": {
+    "checkpoint": "yolo26n-seg.pt",
+    "detected_classes": {
+      "truck": 32,
+      "car": 119,
+      "motorcycle": 30,
+      "person": 72,
+      "bicycle": 4,
+      "bus": 6,
+      "fire hydrant": 1,
+      "potted plant": 2,
+      "train": 3,
+      "traffic light": 2,
+      "backpack": 1
+    },
+    "total_participants": 272,
+    "median_latency_ms": 32.64,
+    "status": "PRETRAINED_NOT_VALIDATED",
+    "gap": "COCO missing Indian 3-wheelers (auto-rickshaws, e-rickshaws)"
+  },
+  "road_scene_segmentation_m5": {
+    "checkpoint": "yolo26n-sem.pt",
+    "mean_road_area_ratio": 0.0,
+    "status": "PRETRAINED_NOT_VALIDATED"
+  },
+  "monocular_depth_m6": {
+    "checkpoint": "yolo26n-depth.pt",
+    "mean_relative_depth": 0.0,
+    "scale": "strictly_relative_inverse_depth",
+    "status": "PRETRAINED_NOT_VALIDATED"
+  },
+  "weather_lighting_m9": {
+    "checkpoint": "runs/weather_classifier_v22/best_weather_model.pt",
+    "weather_distribution": {
+      "Clear": 78,
+      "Rain": 17,
+      "Fog": 4,
+      "Snow": 1
+    },
+    "lighting_distribution": {
+      "Daytime": 62,
+      "Dawn_Dusk": 38
+    },
+    "status": "TRAINED_NOT_VALIDATED"
+  },
+  "lane_detection_m10": {
+    "checkpoint": "runs/lane_detector_v22/best_lane_model.pt",
+    "marking_distribution": {
+      "unmarked_edge": 100
+    },
+    "status": "TRAINED_NOT_VALIDATED"
+  },
+  "open_vocabulary_obstacles_m12": {
+    "checkpoint": "yolov8s-world.pt",
+    "images_tested": 50,
+    "spurious_clean_road_detections": 0,
+    "clean_road_false_alarm_rate": 0.0,
+    "status": "PRETRAINED_NOT_VALIDATED"
+  }
+}
