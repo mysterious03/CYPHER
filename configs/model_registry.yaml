@@ -1,0 +1,207 @@
+# CYPhER Model Registry Configuration
+# Single Source of Truth for all 15 perception capabilities
+
+system:
+  project_name: "CYPhER Road Perception & Hazard Intelligence System"
+  version: "2.0.0"
+  device: "cuda"
+  max_vram_gb: 6.0
+  safety_headroom_gb: 1.0
+
+models:
+  damage:
+    id: "M1_ROAD_DAMAGE"
+    name: "Custom YOLO26n Road Damage Detector"
+    task: "detect"
+    architecture: "YOLO26n"
+    checkpoint: "runs/detect/runs/road_damage/B0_baseline/weights/best.pt"
+    classes:
+      0: "D00_longitudinal_crack"
+      1: "D10_transverse_crack"
+      2: "D20_alligator_crack"
+      3: "D40_pothole"
+    input_size: [640, 640]
+    default_conf: 0.25
+    default_iou: 0.45
+    status: "IMPLEMENTED_AND_TRAINED"
+    metrics:
+      mAP50: 27.71
+      precision: 59.53
+      recall: 28.60
+
+  vehicles:
+    id: "M4_VEHICLE_SEG"
+    name: "YOLO26n Vehicle Instance Segmenter & Tracker"
+    task: "segment"
+    architecture: "YOLO26n-seg"
+    checkpoint: "yolo26n-seg.pt"
+    classes:
+      0: "person"
+      1: "bicycle"
+      2: "car"
+      3: "motorcycle"
+      5: "bus"
+      7: "truck"
+    input_size: [640, 640]
+    default_conf: 0.35
+    tracker: "bytetrack"
+    status: "PRETRAINED_INTEGRATED"
+
+  road_scene:
+    id: "M5_SCENE_SEM"
+    name: "YOLO26n Scene Semantic Segmenter"
+    task: "semantic"
+    architecture: "YOLO26n-sem"
+    checkpoint: "yolo26n-sem.pt"
+    classes:
+      0: "road"
+      1: "sidewalk"
+      2: "building"
+      3: "wall"
+      4: "fence"
+      5: "pole"
+      6: "traffic_light"
+      7: "traffic_sign"
+      8: "vegetation"
+      9: "terrain"
+      10: "sky"
+      11: "person"
+      12: "rider"
+      13: "car"
+      14: "truck"
+      15: "bus"
+      16: "train"
+      17: "motorcycle"
+      18: "bicycle"
+    input_size: [640, 640]
+    default_conf: 0.25
+    status: "PRETRAINED_INTEGRATED"
+
+  water:
+    id: "M3_WATER_SEG"
+    name: "LRASPP MobileNetV3 Road Waterlogging Segmenter"
+    task: "segmentation"
+    architecture: "LRASPP MobileNetV3-Large"
+    checkpoint: "runs/water_segmenter/best_water_model.pt"
+    classes:
+      0: "dry_road"
+      1: "standing_water_flood"
+      2: "water_puddle"
+      3: "specular_wet_reflection"
+    input_size: [512, 512]
+    default_conf: 0.40
+    status: "TRAINING_REQUIRED"
+
+  depth:
+    id: "M6_MONOCULAR_DEPTH"
+    name: "YOLO26n Monocular Depth Estimator"
+    task: "depth"
+    architecture: "YOLO26n-depth"
+    checkpoint: "yolo26n-depth.pt"
+    classes:
+      0: "depth"
+    input_size: [640, 640]
+    measurement_type: "relative"
+    status: "PRETRAINED_INTEGRATED"
+
+  surface:
+    id: "M2_SURFACE_CLASSIFIER"
+    name: "Multi-Task Surface Condition Classifier"
+    task: "classification"
+    architecture: "MobileNetV3-Large Multi-Task"
+    checkpoint: "runs/surface_classifier/best_surface_model.pt"
+    heads:
+      friction: ["Dry", "Wet", "Water-covered", "Fresh snow", "Melted snow", "Ice-covered"]
+      material: ["Asphalt", "Concrete", "Gravel", "Dirt", "Mud", "Loose stone"]
+      unevenness: ["Smooth", "Slightly uneven", "Severely uneven", "Deteriorated"]
+    input_size: [224, 224]
+    default_conf: 0.30
+    status: "IMPLEMENTED_AND_TRAINED"
+    metrics:
+      mean_accuracy: 97.89
+
+  accident:
+    id: "M8_ACCIDENT_INTELLIGENCE"
+    name: "Temporal Video Accident & Anomaly Engine"
+    task: "video_classification"
+    architecture: "Temporal Trajectory Anomaly + Video Classifier"
+    classes:
+      0: "normal_traffic"
+      1: "hard_braking_near_miss"
+      2: "vehicle_collision"
+      3: "vehicle_rollover"
+    input_frames: 16
+    status: "EXPERIMENTAL"
+
+  weather:
+    id: "M9_WEATHER_CLASSIFIER"
+    name: "Environmental Condition & Adverse Weather Engine"
+    task: "classification"
+    architecture: "ConditionAssessor + MobileNetV3-Small"
+    classes:
+      weather: ["Clear", "Rain", "Fog", "Snow", "Overcast"]
+      lighting: ["Daytime", "Nighttime", "Dawn_Dusk"]
+    status: "IMPLEMENTED_AND_TRAINED"
+
+  lanes:
+    id: "M10_LANE_DETECTION"
+    name: "Drivable Corridor & Lane Marking Model"
+    task: "lane_detection"
+    architecture: "Road Boundary Extraction + Polyline Fitter"
+    classes:
+      0: "left_lane_boundary"
+      1: "right_lane_boundary"
+      2: "center_line"
+    status: "EXPERIMENTAL"
+
+  traffic_signals:
+    id: "M11_TRAFFIC_SIGNALS"
+    name: "Traffic Signal Detection & State Classifier"
+    task: "detection_and_classification"
+    architecture: "YOLO26n + Crop HSV State Classifier"
+    classes:
+      0: "red"
+      1: "amber_yellow"
+      2: "green"
+      3: "unknown_off"
+    status: "PRETRAINED_INTEGRATED"
+
+  obstacles:
+    id: "M12_OBSTACLES"
+    name: "Open-Vocabulary Road Obstacle Perception"
+    task: "open_vocabulary_detection"
+    architecture: "Zero-Shot Text Prompt Detector"
+    prompts:
+      - "fallen tree"
+      - "large rock"
+      - "road debris"
+      - "broken concrete"
+      - "construction material"
+      - "fallen cargo"
+      - "tyre on road"
+      - "road barrier"
+    status: "EXPERIMENTAL"
+
+  friction:
+    id: "M13_FRICTION_ESTIMATE"
+    name: "Sensor-Assisted Tyre-Road Friction Estimation"
+    task: "sensor_fusion_estimation"
+    output_type: "VISUAL_SLIP_RISK_ESTIMATE"
+    required_sensors: ["wheel_speed", "vehicle_speed", "imu_acceleration", "yaw_rate"]
+    status: "SENSOR_REQUIRED"
+
+  roughness:
+    id: "M14_ROUGHNESS_IRI"
+    name: "Sensor-Assisted Road Roughness & IRI"
+    task: "sensor_fusion_estimation"
+    output_type: "VISUAL_ROUGHNESS_CLASS"
+    required_sensors: ["accelerometer_vertical", "vehicle_speed", "gyroscope"]
+    status: "SENSOR_REQUIRED"
+
+  pothole_geometry:
+    id: "M15_POTHOLE_GEOMETRY"
+    name: "Calibrated Pothole Dimensions & Depth"
+    task: "geometric_measurement"
+    output_type: "RELATIVE_DIMENSIONS_AND_DEPTH"
+    calibration_requirements: ["camera_height_m", "pitch_angle_deg", "focal_length_px", "intrinsic_matrix"]
+    status: "EXPERIMENTAL"

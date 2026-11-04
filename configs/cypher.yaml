@@ -1,0 +1,47 @@
+# CYPhER Master Application Configuration (v2.0)
+system:
+  name: "CYPhER Multi-Model Road Perception System"
+  version: "2.0.0"
+  device: "cuda" # cuda or cpu
+  max_vram_gb: 6.0
+  safety_headroom_gb: 1.0
+  default_mode: "all"
+  output_dir: "outputs"
+
+thresholds:
+  damage_confidence: 0.25
+  damage_iou: 0.45
+  vehicle_confidence: 0.35
+  water_threshold: 0.40
+  traffic_signal_conf: 0.25
+  obstacle_conf: 0.20
+
+calibration:
+  camera_height_m: 1.35
+  pitch_angle_deg: 8.0
+  focal_length_px: 1200.0
+  is_calibrated: false # Set true only with verified physical calibration parameters
+
+modes:
+  - all
+  - damage
+  - vehicles
+  - road_scene
+  - water
+  - depth
+  - surface
+  - accident
+  - weather
+  - lanes
+  - traffic_signals
+  - obstacles
+  - friction
+  - roughness
+  - pothole_geometry
+
+visualizations:
+  render_overlay: true
+  draw_damage_boxes: true
+  draw_vehicle_tracks: true
+  draw_top_hud: true
+  overlay_format: "jpg"
