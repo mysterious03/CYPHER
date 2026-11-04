@@ -1,0 +1,310 @@
+{
+  "timestamp": "2026-11-05T02:35:32",
+  "hardware": "NVIDIA GeForce RTX 4050 Laptop GPU (6.0 GB VRAM)",
+  "surface": {
+    "evaluated_patches": 1172,
+    "mean_accuracy": 97.9,
+    "friction_head": {
+      "accuracy": 99.32,
+      "balanced_accuracy": 50.0,
+      "macro_f1": 49.83,
+      "weighted_f1": 98.98,
+      "confusion_matrix": [
+        [
+          1164,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "per_class": {
+        "Dry": {
+          "precision": 99.32,
+          "recall": 100.0,
+          "f1": 99.66,
+          "support": 1164
+        },
+        "Wet": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 8
+        },
+        "Water-covered": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "Fresh snow": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "Melted snow": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "Ice-covered": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        }
+      }
+    },
+    "material_head": {
+      "accuracy": 100.0,
+      "balanced_accuracy": 100.0,
+      "macro_f1": 100.0,
+      "weighted_f1": 100.0,
+      "confusion_matrix": [
+        [
+          1172,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "per_class": {
+        "Asphalt": {
+          "precision": 100.0,
+          "recall": 100.0,
+          "f1": 100.0,
+          "support": 1172
+        },
+        "Concrete": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "Gravel": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "Dirt": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "Mud": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "Loose stone": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        }
+      }
+    },
+    "unevenness_head": {
+      "accuracy": 94.37,
+      "balanced_accuracy": 50.0,
+      "macro_f1": 48.55,
+      "weighted_f1": 91.63,
+      "confusion_matrix": [
+        [
+          1106,
+          0,
+          0,
+          0
+        ],
+        [
+          66,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "per_class": {
+        "Smooth": {
+          "precision": 94.37,
+          "recall": 100.0,
+          "f1": 97.1,
+          "support": 1106
+        },
+        "Slightly uneven": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 66
+        },
+        "Severely uneven": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "Deteriorated": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        }
+      }
+    }
+  },
+  "vehicles_and_scene": {
+    "images_evaluated": 100,
+    "vehicle_detections": {
+      "truck": 46,
+      "bus": 13,
+      "car": 171,
+      "motorcycle": 49,
+      "person": 95,
+      "bench": 1,
+      "bicycle": 7,
+      "fire hydrant": 1,
+      "train": 5,
+      "potted plant": 2,
+      "traffic light": 2,
+      "backpack": 1
+    },
+    "mean_road_area_ratio": 35.09,
+    "mean_depth_meters": 22.98
+  },
+  "weather_and_lanes": {
+    "weather_distribution": {
+      "Clear": 78,
+      "Rain": 17,
+      "Fog": 4,
+      "Snow": 1
+    },
+    "lighting_distribution": {
+      "Daytime": 62,
+      "Dawn_Dusk": 38
+    },
+    "lane_marking_distribution": {
+      "dashed_white": 78,
+      "solid_white": 5,
+      "solid_yellow": 3,
+      "unmarked_edge": 2,
+      "double_yellow": 12
+    },
+    "departure_warning_count": 0
+  },
+  "open_vocabulary_obstacles": {
+    "images_tested": 50,
+    "active_prompts": [
+      "fallen tree",
+      "large rock",
+      "boulder on road",
+      "road debris",
+      "broken concrete",
+      "spilled cargo",
+      "tyre on road",
+      "construction material",
+      "traffic barrier",
+      "road obstruction"
+    ],
+    "val_set_detections": {},
+    "benchmark_road_detections": 0
+  }
+}

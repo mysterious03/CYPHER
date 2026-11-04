@@ -3,7 +3,7 @@
 
 system:
   project_name: "CYPhER Road Perception & Hazard Intelligence System"
-  version: "2.2.0"
+  version: "2.3.0"
   device: "cuda"
   max_vram_gb: 6.0
   safety_headroom_gb: 1.0
@@ -23,11 +23,21 @@ models:
     input_size: [640, 640]
     default_conf: 0.25
     default_iou: 0.45
-    status: "IMPLEMENTED_AND_TRAINED"
+    status: "VALIDATED_ACCEPTABLE"
     metrics:
-      mAP50: 27.71
-      precision: 59.53
-      recall: 28.60
+      full_val_images: 1172
+      overall_precision_adaptive: 76.49
+      overall_recall_adaptive: 32.84
+      overall_f1_adaptive: 45.95
+      original_b0_precision: 67.71
+      original_b0_recall: 32.17
+      original_b0_f1: 43.62
+      d20_precision_adaptive: 87.03
+      d20_recall_adaptive: 52.44
+      d40_precision_adaptive: 58.89
+      d40_recall_adaptive: 26.24
+      d10_recall: 0.00
+      small_object_recall: 0.00
 
   vehicles:
     id: "M4_VEHICLE_SEG"
@@ -118,13 +128,17 @@ models:
       unevenness: ["Smooth", "Slightly uneven", "Severely uneven", "Deteriorated"]
     input_size: [224, 224]
     default_conf: 0.30
-    status: "IMPLEMENTED_AND_TRAINED"
+    status: "VALIDATED_WEAK"
     metrics:
-      mean_accuracy: 97.89
-      friction_accuracy: 98.67
+      full_val_patches: 1172
+      mean_accuracy: 97.90
+      friction_accuracy: 99.32
+      friction_macro_f1: 49.83
       material_accuracy: 100.00
-      unevenness_accuracy: 95.00
-      note: "Extreme holdout class imbalance towards Dry/Smooth"
+      material_macro_f1: 100.00
+      unevenness_accuracy: 94.37
+      unevenness_macro_f1: 48.55
+      note: "Extreme holdout class imbalance towards Dry/Smooth causes 0.0% recall on wet and uneven patches"
 
   accident:
     id: "M8_ACCIDENT_INTELLIGENCE"
