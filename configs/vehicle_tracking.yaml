@@ -1,0 +1,15 @@
+# CYPhER Vehicle Tracking Configuration
+tracker_type: "bytetrack.yaml"  # bytetrack.yaml or botsort.yaml
+model_checkpoint: "yolo26n-seg.pt"
+conf_threshold: 0.25
+iou_threshold: 0.5
+classes: [2, 3, 5, 7]  # COCO indices: 2=car, 3=motorcycle, 5=bus, 7=truck
+max_history_length: 60  # Maximum frames of track position history
+min_track_length: 3     # Minimum detections before calculating trajectory vector
+draw_trajectories: true
+draw_arrows: true
+draw_boxes: true
+draw_road_contact_points: true
+arrow_scale: 1.5
+color_by_speed: true
+

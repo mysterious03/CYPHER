@@ -1,0 +1,32 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Testing & linting
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Hugging Face, temp caches, and data dumps
+.cache/
+*.npy
+
+# Model weights & checkpoints (local only, do not commit binaries)
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.bin
+weights/
+runs/
+models/pretrained/
+outputs/
+data/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -19,7 +19,7 @@ from road_cv.core.fusion import CYPhERHazardFusion
 from road_cv.scheduling.resource_scheduler import GPUResourceScheduler
 
 VALID_MODES = [
-    "all", "damage", "vehicles", "road_scene", "water", "depth", "surface",
+    "all", "damage", "vehicles", "vehicle_tracking", "road_scene", "water", "depth", "surface",
     "accident", "weather", "lanes", "traffic_signals", "obstacles",
     "friction", "roughness", "pothole_geometry"
 ]

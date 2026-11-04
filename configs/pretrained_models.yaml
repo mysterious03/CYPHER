@@ -1,0 +1,79 @@
+# CYPhER Pretrained Models Runtime Configuration
+# Configures sequential loading, memory management, and execution profiles for RTX 4050 (6GB VRAM)
+
+memory_management:
+  max_vram_gb: 6.0
+  target_vram_envelope_gb: 4.5
+  sequential_loading: true
+  explicit_cuda_cleanup: true
+  mixed_precision_fp16: true
+
+# Runtime Profiles
+profiles:
+  FAST:
+    description: "Lightweight inference profile optimized for maximum throughput"
+    models:
+      - "water_wetness_yolov8n_seg"
+      - "vehicles_tracking_bytetrack"
+  
+  BALANCED:
+    description: "Standard perception profile balancing latency and accuracy"
+    models:
+      - "damage_yolo12s_rdd2022"
+      - "surface_efficientnet_v2s"
+      - "water_wetness_yolov8n_seg"
+      - "vehicles_tracking_bytetrack"
+      - "signals_traffic_yolov8m"
+      - "weather_siglip2"
+
+  HIGH_ACCURACY:
+    description: "Full intelligence suite including depth and open-vocabulary obstacles"
+    models:
+      - "damage_yolo12s_rdd2022"
+      - "surface_efficientnet_v2s"
+      - "water_wetness_yolov8n_seg"
+      - "vehicles_tracking_bytetrack"
+      - "depth_anything_v2_small"
+      - "weather_siglip2"
+      - "signals_traffic_yolov8m"
+      - "obstacles_yolo_world"
+      - "accident_simpletad_videomae"
+
+# Individual Model Overrides
+model_settings:
+  damage_yolo12s_rdd2022:
+    enabled: true
+    conf_threshold: 0.25
+
+  surface_efficientnet_v2s:
+    enabled: true
+
+  water_wetness_yolov8n_seg:
+    enabled: true
+    conf_threshold: 0.05
+
+  vehicles_tracking_bytetrack:
+    enabled: true
+    conf_threshold: 0.25
+
+  depth_anything_v2_small:
+    enabled: true
+
+  accident_simpletad_videomae:
+    enabled: true
+    anomaly_threshold: 0.50
+
+  weather_siglip2:
+    enabled: true
+
+  lanes_clrernet_dla34:
+    enabled: false  # Requires compiled mmcv ops on Windows; CYPhER native lane detector used
+
+  signals_traffic_yolov8m:
+    enabled: true
+    conf_threshold: 0.25
+
+  obstacles_yolo_world:
+    enabled: true
+    conf_threshold: 0.15
+

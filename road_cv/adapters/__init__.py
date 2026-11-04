@@ -21,10 +21,12 @@ from road_cv.adapters.specialized_adapters import (
     RoughnessAdapter,
     PotholeGeometryAdapter
 )
+from road_cv.tracking.vehicle_path_tracker import VehiclePathTracker
 
 ADAPTER_MAP = {
     "damage": DamageAdapter,
     "vehicles": VehicleAdapter,
+    "vehicle_tracking": VehiclePathTracker,
     "road_scene": RoadSceneAdapter,
     "water": WaterAdapter,
     "depth": DepthAdapter,

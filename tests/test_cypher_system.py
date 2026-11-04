@@ -31,9 +31,10 @@ def dummy_frame():
     return np.full((640, 640, 3), 120, dtype=np.uint8)
 
 def test_valid_modes_list():
-    assert len(VALID_MODES) == 15
+    assert len(VALID_MODES) == 16
     assert "all" in VALID_MODES
     assert "damage" in VALID_MODES
+    assert "vehicle_tracking" in VALID_MODES
     assert "friction" in VALID_MODES
     assert "roughness" in VALID_MODES
 
@@ -154,4 +155,13 @@ def test_v22_adaptive_perception_pipeline(dummy_frame):
     assert "refinement_stats" in out
     assert "detections" in out
     assert out["profile_key"] == "fast"
+
+def test_vehicle_path_tracker(dummy_frame):
+    """Tests vehicle tracking mode with ByteTrack."""
+    from road_cv.tracking.vehicle_path_tracker import VehiclePathTracker
+    tracker = VehiclePathTracker()
+    res = tracker.predict(dummy_frame)
+    assert res["status"] == "INFERENCE_VERIFIED"
+    assert "tracks" in res
+    tracker.release_resources()
 

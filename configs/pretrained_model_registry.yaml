@@ -1,0 +1,162 @@
+# CYPhER Pretrained Model Registry
+# Master catalog of all pretrained and external plug-in perception models.
+
+models:
+  damage_yolo12s_rdd2022:
+    task: "road_damage"
+    role: "secondary_comparator"
+    checkpoint: "models/pretrained/damage/yolo12s_RDD2022_best.pt"
+    source_url: "https://huggingface.co/rezzzq/yolo12s-road-damage-rdd2022"
+    architecture: "YOLO12s"
+    license: "MIT"
+    file_size_bytes: 18966618
+    sha256: "ccf91e3199d81ee761f4a3a012da752939c9d72e9b1eaa242e508db3163270a0"
+    classes: ["D00", "D10", "D20", "D40", "Repair"]
+    adapter_class: "road_cv.adapters.pretrained_damage_adapter.PretrainedDamageAdapter"
+    status: "PRETRAINED_INTEGRATED"
+
+  surface_efficientnet_v2s:
+    task: "surface_type_and_quality"
+    role: "pretrained_suite"
+    checkpoint: "models/pretrained/surface/v1/surface_type_v1.pt"
+    checkpoint_aux: "models/pretrained/surface/v1/surface_quality_asphalt_v1.pt"
+    source_url: "https://huggingface.co/SurfaceAI/models-moved"
+    architecture: "CustomEfficientNetV2SLinear"
+    license: "Research / Open Weights"
+    file_size_bytes: 81630118
+    sha256: "1c87e8d1649b7aec19fc6927da0315f34c865cbc6913d9e0c35c430c69e7c1de"
+    classes: ["asphalt", "concrete", "paving_stones", "sett", "unpaved"]
+    adapter_class: "road_cv.surface.pretrained_surface_adapter.PretrainedSurfaceAdapter"
+    status: "PRETRAINED_INTEGRATED"
+
+  water_wetness_yolov8n_seg:
+    task: "road_wetness_segmentation"
+    role: "primary_wetness"
+    checkpoint: "models/pretrained/water/road_wetness_yolov8n_seg.pt"
+    source_url: "https://github.com/martinkenas/Road-Segmentation-for-type-wetness-and-roughness"
+    architecture: "YOLOv8n-Seg"
+    license: "Open Source"
+    file_size_bytes: 6802861
+    sha256: "a2bba905973ba2a325c29e629dcfebdde691145015462df81512f8b91c71e84c"
+    classes: ["sausas (dry)", "slapias (wet)"]
+    adapter_class: "road_cv.water.pretrained_wetness_adapter.PretrainedWetnessAdapter"
+    status: "PRETRAINED_INTEGRATED"
+
+  water_puddle_multiclass_unet:
+    task: "water_puddle_segmentation"
+    role: "external_candidate"
+    checkpoint: "models/pretrained/water/road_surface_multiclass_unet.pt"
+    source_url: "https://github.com/Shrinidhi1/Multiclass-Semantic-Segmentation-for-Road-Surface-Detection"
+    architecture: "ResNet34-UNet"
+    license: "Unknown"
+    classes: ["Asphalt", "Paved road", "Water puddle", "Pothole", "Cracks"]
+    adapter_class: "road_cv.water.pretrained_puddle_adapter.PretrainedPuddleAdapter"
+    status: "CHECKPOINT_UNAVAILABLE"
+    note: "Repository provides Jupyter notebooks only; no serialized .pt weights hosted."
+
+  vehicles_tracking_bytetrack:
+    task: "vehicle_tracking"
+    role: "integrated_tracker"
+    checkpoint: "yolo26n-seg.pt"
+    tracker_config: "configs/vehicle_tracking.yaml"
+    architecture: "YOLO26n-Seg + ByteTrack / BoT-SORT"
+    license: "AGPL-3.0"
+    classes: ["car", "motorcycle", "bus", "truck"]
+    adapter_class: "road_cv.tracking.vehicle_path_tracker.VehiclePathTracker"
+    status: "PRETRAINED_INTEGRATED"
+
+  scene_idd_drivable_unet:
+    task: "idd_drivable_area"
+    role: "external_candidate"
+    checkpoint: "models/pretrained/scene/idd_drivable_unet.pth"
+    source_url: "https://github.com/SenorPsycho/idd-road-segmentation"
+    architecture: "ResNet50-UNet"
+    license: "MIT"
+    adapter_class: "road_cv.scene.idd_drivable_adapter.IDDDrivableAdapter"
+    status: "CHECKPOINT_UNAVAILABLE"
+    note: "Repository runs/ folder contains metric logs and PNG figures only; no serialized model weights."
+
+  depth_anything_v2_small:
+    task: "relative_depth_estimation"
+    role: "dense_depth_comparator"
+    model_dir: "models/pretrained/depth/depth_anything_v2_small"
+    source_url: "https://huggingface.co/depth-anything/Depth-Anything-V2-Small-hf"
+    architecture: "DPT_DINOv2_Small"
+    license: "Apache-2.0"
+    file_size_bytes: 99173660
+    sha256: "3152477ce0d8d6978d76b995120de97cb5b928701fd0f817769f59e249a16b70"
+    adapter_class: "road_cv.depth.pretrained_depth_adapter.PretrainedDepthAdapter"
+    status: "PRETRAINED_INTEGRATED"
+
+  accident_simpletad_videomae:
+    task: "traffic_anomaly_accident"
+    role: "temporal_video_detector"
+    checkpoint: "models/pretrained/accident/simpletad_ft-dota_vm1-s_auroc.pth"
+    source_url: "https://huggingface.co/tue-mps/simple-tad"
+    architecture: "VideoMAE_ViTS"
+    license: "CC BY-NC 4.0 (Non-Commercial Research)"
+    file_size_bytes: 43793762
+    sha256: "b6ac987f56420cd9707799c11089efbe77749ec8897f633676cfdc892ac94846"
+    classes: ["normal_traffic", "anomaly_accident"]
+    adapter_class: "road_cv.accident.simple_tad_adapter.SimpleTADAdapter"
+    status: "PRETRAINED_INTEGRATED"
+
+  weather_siglip2:
+    task: "weather_classification"
+    role: "atmospheric_condition"
+    model_dir: "models/pretrained/weather/weather_siglip2"
+    source_url: "https://huggingface.co/prithivMLmods/Weather-Image-Classification"
+    architecture: "SigLIP2"
+    license: "Apache-2.0"
+    file_size_bytes: 371577220
+    sha256: "e1dd179ce7f0b23daacbf158d03c9e453adce0530cfeee6ff45ecc77e6945924"
+    classes: ["cloudy_overcast", "foggy_hazy", "rain_storm", "snow_frosty", "clear_sunny"]
+    adapter_class: "road_cv.weather.pretrained_weather_adapter.PretrainedWeatherAdapter"
+    status: "PRETRAINED_INTEGRATED"
+
+  lanes_clrernet_dla34:
+    task: "lane_detection"
+    role: "secondary_culane_model"
+    checkpoint: "models/pretrained/lanes/clrernet_culane_dla34_ema.pth"
+    source_url: "https://github.com/hirotomusiker/CLRerNet"
+    architecture: "CLRerNet_DLA34"
+    license: "Apache-2.0"
+    file_size_bytes: 63464485
+    sha256: "cce8b552bc8301e31186da192fe4213043e9351b35651ef5d40014ce3040c787"
+    adapter_class: "road_cv.lanes.clrernet_adapter.CLRerNetAdapter"
+    status: "DEPENDENCY_CONFLICT"
+    note: "Downloaded and verified; requires compiled mmcv ops on Windows. Native CYPhER lane detector active."
+
+  signals_traffic_yolov8m:
+    task: "traffic_signals_detection"
+    role: "primary_signals_detector"
+    checkpoint: "models/pretrained/signals/traffic_signals_yolov8m.pt"
+    source_url: "https://huggingface.co/subhodeepmoitra/Traffic_signals_detection_YOLOv8m"
+    architecture: "YOLOv8m"
+    license: "Open Source"
+    file_size_bytes: 52027730
+    sha256: "f26eb64887568665cb57902be117aad99c28f16fa5ca1ed6ee2ac97085f38716"
+    classes: ["Traffic_Light_Signal", "Stop_Signal", "Speedlimit_Signal", "Crosswalk_Signal", "Crosswalk", "Pedestrian", "Bus", "Car", "Truck"]
+    adapter_class: "road_cv.traffic_signals.pretrained_signal_adapter.PretrainedSignalAdapter"
+    status: "PRETRAINED_INTEGRATED"
+
+  signals_lightd_v4_experimental:
+    task: "traffic_light_centernet"
+    role: "comma_camera_experimental"
+    checkpoint: "models/pretrained/signals/lightd_v4_best.pt"
+    onnx_file: "models/pretrained/signals/lightd_v4.onnx"
+    source_url: "https://huggingface.co/Sculptor-AI/lightd-v4"
+    architecture: "CenterNet_EfficientNetB0"
+    license: "CC BY-NC-SA 4.0"
+    status: "CAMERA_SPECIFIC"
+    note: "Calibrated strictly for comma 4 narrow camera view (384x1344). Marked experimental."
+
+  obstacles_yolo_world:
+    task: "open_vocabulary_obstacles"
+    role: "hazard_and_debris_detector"
+    checkpoint: "yolov8s-world.pt"
+    architecture: "YOLOv8s-World"
+    license: "AGPL-3.0"
+    adapter_class: "road_cv.obstacles.pretrained_obstacle_adapter.PretrainedObstacleAdapter"
+    status: "PRETRAINED_INTEGRATED"
+

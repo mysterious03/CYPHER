@@ -19,6 +19,7 @@ import json
 import argparse
 from pathlib import Path
 import cv2
+import numpy as np
 
 # Add workspace to sys.path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -156,7 +157,20 @@ def main():
         # Save full structured JSON
         out_json_path = os.path.join(args.output_dir, f"cypher_{Path(str(source_path)).stem}_result.json")
         with open(out_json_path, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=2)
+            def _serialize(o):
+                import numpy as np
+                if isinstance(o, np.ndarray):
+                    return f"<ndarray shape={o.shape}>" if (o.ndim >= 2 and o.size > 20) else o.tolist()
+                if isinstance(o, (np.integer, np.int64, np.int32)):
+                    return int(o)
+                if isinstance(o, (np.floating, np.float32, np.float64)):
+                    return float(o)
+                if isinstance(o, dict):
+                    return {k: _serialize(v) for k, v in o.items()}
+                if isinstance(o, (list, tuple)):
+                    return [_serialize(v) for v in o]
+                return o
+            json.dump(_serialize(results), f, indent=2)
         print(f"JSON Result Saved:   {out_json_path}")
         print("-" * 72)
 
