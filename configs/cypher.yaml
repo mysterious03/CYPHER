@@ -1,7 +1,7 @@
-# CYPhER Master Application Configuration (v2.3.1)
+# CYPhER Master Application Configuration (v2.4.0)
 system:
   name: "CYPhER Multi-Model Road Perception System"
-  version: "2.3.1"
+  version: "2.4.0"
   device: "cuda" # cuda or cpu
   max_vram_gb: 6.0
   safety_headroom_gb: 1.0
@@ -62,11 +62,3 @@ modes:
   - friction
   - roughness
   - pothole_geometry
-
-visualizations:
-  render_overlay: true
-  draw_damage_boxes: true
-  draw_vehicle_tracks: true
-  draw_top_hud: true
-  overlay_format: "jpg"
-

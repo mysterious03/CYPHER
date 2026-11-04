@@ -1,9 +1,9 @@
-# CYPhER Model Registry Configuration
+# CYPhER Model Registry Configuration (V2.4.0)
 # Single Source of Truth for all 15 perception capabilities
 
 system:
   project_name: "CYPhER Road Perception & Hazard Intelligence System"
-  version: "2.3.1"
+  version: "2.4.0"
   device: "cuda"
   max_vram_gb: 6.0
   safety_headroom_gb: 1.0
@@ -14,7 +14,8 @@ models:
     name: "Custom YOLO26n Road Damage Detector"
     task: "detect"
     architecture: "YOLO26n"
-    checkpoint: "runs/detect/road_damage_v22/weights/best.pt"
+    checkpoint: "runs/detect/road_damage_v24/weights/best.pt"
+    fallback_checkpoint: "runs/detect/road_damage_v22/weights/best.pt"
     classes:
       0: "D00_longitudinal_crack"
       1: "D10_transverse_crack"
@@ -27,17 +28,54 @@ models:
     metrics:
       full_val_images: 1172
       overall_precision_adaptive: 76.49
-      overall_recall_adaptive: 32.84
-      overall_f1_adaptive: 45.95
-      original_b0_precision: 67.71
-      original_b0_recall: 32.17
-      original_b0_f1: 43.62
-      d20_precision_adaptive: 87.03
-      d20_recall_adaptive: 52.44
-      d40_precision_adaptive: 58.89
-      d40_recall_adaptive: 26.24
-      d10_recall: 0.00
-      small_object_recall: 0.00
+      overall_recall_adaptive: 38.76
+      overall_f1_adaptive: 47.25
+      d20_precision_adaptive: 86.63
+      d20_recall_adaptive: 52.77
+      d40_precision_adaptive: 57.95
+      d40_recall_adaptive: 25.25
+
+  surface:
+    id: "M2_SURFACE_CLASSIFIER"
+    name: "Multi-Task Surface Condition Classifier"
+    task: "classification"
+    architecture: "MobileNetV3-Small Multi-Task"
+    checkpoint: "runs/surface_classifier_v24/best_surface_model.pt"
+    heads:
+      friction: ["Dry", "Wet", "Water-covered", "Fresh snow", "Melted snow", "Ice-covered"]
+      material: ["Asphalt", "Concrete", "Gravel", "Dirt", "Mud", "Loose stone"]
+      unevenness: ["Smooth", "Slightly uneven", "Severely uneven", "Deteriorated"]
+    input_size: [224, 224]
+    default_conf: 0.30
+    status: "VALIDATED_ACCEPTABLE"
+    metrics:
+      full_val_patches: 1172
+      mean_accuracy: 98.04
+      friction_balanced_accuracy: 98.58
+      friction_macro_f1: 65.61
+      wet_recall: 100.00
+      material_accuracy: 100.00
+      material_macro_f1: 100.00
+      unevenness_balanced_accuracy: 96.95
+      unevenness_macro_f1: 88.20
+      uneven_recall: 96.97
+      training_strategy: "Class-Balanced Effective Number (beta=0.999)"
+
+  water:
+    id: "M3_WATER_SEG"
+    name: "LRASPP MobileNetV3 Road Waterlogging Segmenter"
+    task: "segmentation"
+    architecture: "LRASPP MobileNetV3-Large"
+    checkpoint: "runs/water_segmenter/best_water_model.pt"
+    classes:
+      0: "dry_road"
+      1: "standing_water_flood"
+      2: "water_puddle"
+      3: "specular_wet_reflection"
+    input_size: [512, 512]
+    default_conf: 0.40
+    status: "DATASET_REQUIRED"
+    annotation: "Synthetic pseudo-masks quarantined; authentic pixel-level benchmark ingestion required"
 
   vehicles:
     id: "M4_VEHICLE_SEG"
@@ -55,7 +93,8 @@ models:
     input_size: [640, 640]
     default_conf: 0.35
     tracker: "bytetrack"
-    status: "PRETRAINED_INTEGRATED"
+    status: "PRETRAINED_NOT_VALIDATED"
+    annotation: "COCO weights miss 3-wheelers (auto-rickshaws) and tractors; IDD fine-tuning blueprint prepared"
 
   road_scene:
     id: "M5_SCENE_SEM"
@@ -85,24 +124,7 @@ models:
       18: "bicycle"
     input_size: [640, 640]
     default_conf: 0.25
-    status: "PRETRAINED_INTEGRATED"
-
-  water:
-    id: "M3_WATER_SEG"
-    name: "LRASPP MobileNetV3 Road Waterlogging Segmenter"
-    task: "segmentation"
-    architecture: "LRASPP MobileNetV3-Large"
-    checkpoint: "runs/water_segmenter/best_water_model.pt"
-    classes:
-      0: "dry_road"
-      1: "standing_water_flood"
-      2: "water_puddle"
-      3: "specular_wet_reflection"
-    input_size: [512, 512]
-    default_conf: 0.40
-    status: "DATASET_REQUIRED" # Checkpoint trained on heuristic pseudo-masks; authentic pixel dataset required
-    metrics:
-      training_source: "heuristic_pseudo_masks"
+    status: "PRETRAINED_NOT_VALIDATED"
 
   depth:
     id: "M6_MONOCULAR_DEPTH"
@@ -114,60 +136,10 @@ models:
       0: "depth"
     input_size: [640, 640]
     measurement_type: "relative"
-    status: "PRETRAINED_INTEGRATED"
-
-  surface:
-    id: "M2_SURFACE_CLASSIFIER"
-    name: "Multi-Task Surface Condition Classifier"
-    task: "classification"
-    architecture: "MobileNetV3-Large Multi-Task"
-    checkpoint: "runs/surface_classifier_v231/exp4_effective_number/best_model.pt"
-    heads:
-      friction: ["Dry", "Wet", "Water-covered", "Fresh snow", "Melted snow", "Ice-covered"]
-      material: ["Asphalt", "Concrete", "Gravel", "Dirt", "Mud", "Loose stone"]
-      unevenness: ["Smooth", "Slightly uneven", "Severely uneven", "Deteriorated"]
-    input_size: [224, 224]
-    default_conf: 0.30
-    status: "VALIDATED_ACCEPTABLE"
-    metrics:
-      full_val_patches: 1172
-      mean_accuracy: 98.04
-      friction_balanced_accuracy: 98.58
-      friction_macro_f1: 65.61
-      wet_recall: 100.00
-      material_accuracy: 100.00
-      material_macro_f1: 100.00
-      unevenness_balanced_accuracy: 96.95
-      unevenness_macro_f1: 88.20
-      uneven_recall: 96.97
-      training_strategy: "Effective-Number Class Weighting (beta=0.999)"
-
-  accident:
-    id: "M8_ACCIDENT_INTELLIGENCE"
-    name: "Temporal Video Accident & Anomaly Engine"
-    task: "video_action_recognition"
-    architecture: "16-Frame Spatio-Temporal 3D-CNN + Trajectory Tracking"
-    classes:
-      0: "normal_traffic"
-      1: "hard_braking_near_miss"
-      2: "vehicle_collision"
-      3: "vehicle_rollover_or_jackknife"
-    status: "IMPLEMENTED_BUT_UNTRAINED"
-    annotation: "DATASET_REQUIRED: Trajectory heuristics active; 3D-CNN awaiting video crash dataset"
-
-  weather:
-    id: "M9_WEATHER_CLASSIFIER"
-    name: "Multi-Task Environmental Weather & Lighting Classifier"
-    task: "classification"
-    architecture: "MobileNetV3-Small Dual-Head"
-    checkpoint: "runs/weather_classifier_v22/best_weather_model.pt"
-    classes:
-      weather: ["Clear", "Rain", "Fog", "Snow", "Overcast"]
-      lighting: ["Daytime", "Nighttime", "Dawn_Dusk"]
-    status: "IMPLEMENTED_AND_TRAINED"
+    status: "CALIBRATION_REQUIRED"
 
   lanes:
-    id: "M10_LANE_DETECTION"
+    id: "M7_LANE_DETECTION"
     name: "Dedicated Polyline Lane & Marking Detector"
     task: "lane_detection"
     architecture: "MobileNetV3 Row-wise Anchor Polyline Model"
@@ -178,10 +150,21 @@ models:
       2: "solid_yellow"
       3: "double_yellow"
       4: "unmarked_edge"
-    status: "IMPLEMENTED_AND_TRAINED"
+    status: "TRAINED_NOT_VALIDATED"
+
+  weather:
+    id: "M8_WEATHER_CLASSIFIER"
+    name: "Multi-Task Environmental Weather & Lighting Classifier"
+    task: "classification"
+    architecture: "MobileNetV3-Small Dual-Head"
+    checkpoint: "runs/weather_classifier_v22/best_weather_model.pt"
+    classes:
+      weather: ["Clear", "Rain", "Fog", "Snow", "Overcast"]
+      lighting: ["Daytime", "Nighttime", "Dawn_Dusk"]
+    status: "TRAINED_NOT_VALIDATED"
 
   traffic_signals:
-    id: "M11_TRAFFIC_SIGNALS"
+    id: "M9_TRAFFIC_SIGNALS"
     name: "Traffic Signal Detection & Hybrid State Classifier"
     task: "detection_and_classification"
     architecture: "YOLO26n Box + Patch CNN Classifier with Optical HSV Fallback"
@@ -191,10 +174,11 @@ models:
       1: "amber_yellow"
       2: "green"
       3: "unknown_or_off"
-    status: "IMPLEMENTED_AND_TRAINED"
+    status: "VALIDATED_ACCEPTABLE"
+    annotation: "Optical HSV vertical thirds rule validated; patch CNN gated as DATASET_REQUIRED"
 
   obstacles:
-    id: "M12_OBSTACLES"
+    id: "M10_OBSTACLES"
     name: "Open-Vocabulary Zero-Shot Road Obstacle Perception"
     task: "open_vocabulary_detection"
     architecture: "YOLO-World (yolov8s-world.pt) Text-Prompted Model"
@@ -210,7 +194,28 @@ models:
       - "construction material"
       - "traffic barrier"
       - "road obstruction"
-    status: "PRETRAINED_INTEGRATED"
+    status: "PRETRAINED_NOT_VALIDATED"
+
+  accident:
+    id: "M11_ACCIDENT_INTELLIGENCE"
+    name: "Temporal Video Accident & Anomaly Engine"
+    task: "video_action_recognition"
+    architecture: "16-Frame Spatio-Temporal 3D-CNN + Trajectory Tracking"
+    classes:
+      0: "normal_traffic"
+      1: "hard_braking_near_miss"
+      2: "vehicle_collision"
+      3: "vehicle_rollover_or_jackknife"
+    status: "PRETRAINED_NOT_VALIDATED"
+    annotation: "Heuristic tracker active; 3D ST-GCN awaiting DADA-2000 dataset (DATASET_REQUIRED)"
+
+  pothole_geometry:
+    id: "M12_POTHOLE_GEOMETRY"
+    name: "Calibrated Pothole Dimensions & Depth"
+    task: "geometric_measurement"
+    output_type: "RELATIVE_DIMENSIONS_AND_DEPTH"
+    calibration_requirements: ["camera_height_m", "pitch_angle_deg", "focal_length_px", "intrinsic_matrix"]
+    status: "CALIBRATION_REQUIRED"
 
   friction:
     id: "M13_FRICTION_ESTIMATE"
@@ -228,11 +233,8 @@ models:
     required_sensors: ["accelerometer_vertical", "vehicle_speed", "gyroscope"]
     status: "SENSOR_REQUIRED"
 
-  pothole_geometry:
-    id: "M15_POTHOLE_GEOMETRY"
-    name: "Calibrated Pothole Dimensions & Depth"
-    task: "geometric_measurement"
-    output_type: "RELATIVE_DIMENSIONS_AND_DEPTH"
-    calibration_requirements: ["camera_height_m", "pitch_angle_deg", "focal_length_px", "intrinsic_matrix"]
-    status: "CALIBRATION_REQUIRED"
-
+  master_fusion:
+    id: "M15_ALL_HAZARDS"
+    name: "Unified Multi-Model Hazard Intelligence Orchestrator"
+    task: "hazard_fusion"
+    status: "VALIDATED_ACCEPTABLE"
