@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYPhER | Road Perception & Hazard Intelligence</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --card: #121215;
+      --card-hover: #18181c;
+      --border: #27272a;
+      --border-focus: #3f3f46;
+      --text: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --text-dim: #71717a;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.12);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.12);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.12);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(9, 9, 11, 0.85);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    .brand-sub {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .pill {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    /* Navigation Tabs */
+    .tabs-bar {
+      display: flex;
+      gap: 4px;
+      padding: 12px 28px 0;
+      border-bottom: 1px solid var(--border);
+      background: #0d0d10;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 0.88rem;
+      font-weight: 500;
+      padding: 10px 18px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: #fff;
+      border-bottom-color: var(--accent);
+    }
+
+    /* Main Grid */
+    main {
+      flex: 1;
+      padding: 24px 28px;
+      display: grid;
+      grid-template-columns: 1.25fr 0.95fr;
+      gap: 24px;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (max-width: 1024px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* Section & Cards */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .panel-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .panel-body {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* Drop Zone */
+    .drop-zone {
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      background: rgba(255, 255, 255, 0.01);
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(37, 99, 235, 0.04);
+    }
+    .drop-icon {
+      font-size: 2rem;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .drop-text {
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .drop-hint {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+    .file-input { display: none; }
+
+    /* Controls Row */
+    .controls-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .select-input, .text-input {
+      background: #18181c;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .select-input:focus, .text-input:focus { border-color: var(--border-focus); }
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: #1f1f23;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: #27272a; }
+
+    /* Media Viewer */
+    .viewer-container {
+      position: relative;
+      background: #000;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      min-height: 380px;
+      max-height: 600px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .viewer-img, .viewer-video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .viewer-empty {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    .viewer-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(9, 9, 11, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+    }
+
+    /* Scorecard Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .metric-card {
+      background: #16161a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .metric-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+    }
+    .metric-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .risk-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      width: fit-content;
+    }
+    .risk-low { background: var(--green-bg); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.25); }
+    .risk-mod { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.25); }
+    .risk-sev { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.25); }
+
+    /* Hazards List */
+    .hazards-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .hazard-item {
+      background: #16161a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      border-left: 3px solid var(--amber);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .hazard-item.critical { border-left-color: var(--red); }
+    .hazard-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+    }
+    .hazard-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Detections Pill List */
+    .tags-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag-item {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: #1e1e24;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .tag-pothole { border-color: rgba(239, 68, 68, 0.4); color: #fca5a5; }
+    .tag-crack { border-color: rgba(245, 158, 11, 0.4); color: #fde68a; }
+    .tag-vehicle { border-color: rgba(59, 130, 246, 0.4); color: #93c5fd; }
+
+    /* Spinner */
+    .loader {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Live Feed Inputs */
+    .live-input-group {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+    .live-input-group input { flex: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <span class="brand-title">CYPhER</span>
+      <span class="brand-sub">Road Perception & Hazard Intelligence</span>
+    </div>
+    <div class="header-right">
+      <div class="pill">
+        <span class="pill-dot"></span>
+        <span id="gpuStatus">RTX 4050 &bull; CUDA Active</span>
+      </div>
+      <div class="pill">
+        <span>16 Active Modules</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mode Navigation Tabs -->
+  <div class="tabs-bar">
+    <button class="tab-btn active" onclick="switchTab('photo')">Photo Analysis</button>
+    <button class="tab-btn" onclick="switchTab('video')">Video Analysis</button>
+    <button class="tab-btn" onclick="switchTab('live')">Live Camera Stream</button>
+  </div>
+
+  <!-- Main Content Layout -->
+  <main>
+    <!-- Left Column: Input and Visual Viewer -->
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title" id="viewerTitle">Input & Perception Viewer</span>
+        <div class="controls-row" id="viewToggleButtons" style="display: none;">
+          <button class="btn btn-secondary" onclick="toggleView('overlay')">Annotated</button>
+          <button class="btn btn-secondary" onclick="toggleView('original')">Original</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        
+        <!-- Tab 1: Photo Drag & Drop -->
+        <div id="tabPhoto">
+          <div class="drop-zone" id="photoDropZone" onclick="document.getElementById('photoInput').click()">
+            <div class="drop-icon">&square;</div>
+            <div class="drop-text">Drag & drop road photos here, or click to browse</div>
+            <div class="drop-hint">Supports JPEG, PNG, WEBP (Dashcam, phone road captures)</div>
+            <input type="file" id="photoInput" class="file-input" accept="image/*" onchange="handlePhotoUpload(this.files[0])">
+          </div>
+          <div class="controls-row" style="margin-top: 14px;">
+            <label style="font-size: 0.8rem; color: var(--text-dim);">Perception Mode:</label>
+            <select id="photoMode" class="select-input">
+              <option value="all">Complete Multi-Modal (All Hazards)</option>
+              <option value="damage">Road Damage (Cracks & Potholes)</option>
+              <option value="vehicles">Vehicles & Road Users</option>
+              <option value="water">Waterlogging & Puddles</option>
+              <option value="accident">Accident & Collision Check</option>
+              <option value="surface">Surface Material & Quality</option>
+              <option value="traffic_signals">Traffic Signals</option>
+            </select>
+            <button class="btn btn-secondary" onclick="loadSamplePhoto()">Load Road Sample</button>
+          </div>
+        </div>
+
+        <!-- Tab 2: Video Drag & Drop -->
+        <div id="tabVideo" style="display: none;">
+          <div class="drop-zone" id="videoDropZone" onclick="document.getElementById('videoInput').click()">
+            <div class="drop-icon">&#9658;</div>
+            <div class="drop-text">Drag & drop dashcam video clips here</div>
+            <div class="drop-hint">Supports MP4, AVI, MOV, MKV</div>
+            <input type="file" id="videoInput" class="file-input" accept="video/*" onchange="handleVideoUpload(this.files[0])">
+          </div>
+          <div class="controls-row" style="margin-top: 14px;">
+            <label style="font-size: 0.8rem; color: var(--text-dim);">Video Analysis Mode:</label>
+            <select id="videoMode" class="select-input">
+              <option value="vehicles">Vehicle Tracking (ByteTrack)</option>
+              <option value="accident">Collision & Temporal Anomaly</option>
+              <option value="damage">Road Damage Scan</option>
+              <option value="all">Full Hazard Intelligence</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tab 3: Live Camera Stream -->
+        <div id="tabLive" style="display: none;">
+          <div class="live-input-group">
+            <input type="text" id="streamUrl" class="text-input" placeholder="Phone IP URL (http://192.168.0.213:8080/video) or device index (0)" value="http://192.168.0.213:8080/video">
+            <select id="liveMode" class="select-input" style="width: 200px;">
+              <option value="all">All Hazards (Multi-Modal)</option>
+              <option value="vehicles,damage,water,accident">Fast Multi-Hazard</option>
+              <option value="vehicles">Vehicle Tracking</option>
+              <option value="damage">Road Damage Only</option>
+              <option value="water">Waterlogging Only</option>
+            </select>
+            <button id="btnStreamToggle" class="btn" onclick="toggleStream()">Start Stream</button>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">
+            &bull; Wi-Fi IP Webcam: <code>http://&lt;phone-ip&gt;:8080/video</code> &bull; USB / Webcam: <code>0</code> or <code>1</code>
+          </div>
+        </div>
+
+        <!-- Media Display Canvas / Image Viewer -->
+        <div class="viewer-container" id="viewerBox">
+          <div class="viewer-empty" id="viewerEmpty">
+            No media loaded.<br>Drop an image or start a stream above to begin perception.
+          </div>
+          <img id="viewerImg" class="viewer-img" style="display: none;">
+          <div id="viewerBadge" class="viewer-badge" style="display: none;">ANNOTATED HUD</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Right Column: Safety Scorecard & Hazard Intelligence -->
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Safety Telemetry & Scoring</span>
+        <span id="analysisStatus" style="font-size: 0.75rem; color: var(--text-dim);">Standby</span>
+      </div>
+      <div class="panel-body">
+        
+        <!-- Scorecard Metrics -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">Overall Safety Risk</span>
+            <div id="riskScoreBadge" class="risk-badge risk-low">LOW RISK</div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Fusion Confidence</span>
+            <span class="metric-value" id="metricConfidence">--</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Pipeline Latency</span>
+            <span class="metric-value" id="metricLatency">--</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Active Hazards</span>
+            <span class="metric-value" id="metricHazardsCount">0</span>
+          </div>
+        </div>
+
+        <!-- Detected Hazards Section -->
+        <div>
+          <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-bottom: 8px;">
+            Identified Road Hazards
+          </div>
+          <div class="hazards-container" id="hazardsList">
+            <div style="font-size: 0.82rem; color: var(--text-dim); padding: 8px 0;">
+              No hazards detected yet. Load media to evaluate road conditions.
+            </div>
+          </div>
+        </div>
+
+        <!-- Detection Summary Tags -->
+        <div>
+          <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-bottom: 8px;">
+            Target Detections Breakdown
+          </div>
+          <div class="tags-cloud" id="detectionsList">
+            <span class="tag-item">Potholes: 0</span>
+            <span class="tag-item">Cracks: 0</span>
+            <span class="tag-item">Vehicles: 0</span>
+            <span class="tag-item">Water: Dry</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Frontend Logic -->
+  <script>
+    let currentOriginalUrl = null;
+    let currentOverlayUrl = null;
+    let isStreaming = false;
+    let streamTimer = null;
+
+    // Tab Switching
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      document.getElementById('tabPhoto').style.display = tab === 'photo' ? 'block' : 'none';
+      document.getElementById('tabVideo').style.display = tab === 'video' ? 'block' : 'none';
+      document.getElementById('tabLive').style.display = tab === 'live' ? 'block' : 'none';
+
+      if (tab !== 'live' && isStreaming) {
+        stopStream();
+      }
+    }
+
+    // Drag and drop setup
+    const photoZone = document.getElementById('photoDropZone');
+    ['dragenter', 'dragover'].forEach(name => {
+      photoZone.addEventListener(name, (e) => { e.preventDefault(); photoZone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      photoZone.addEventListener(name, (e) => { e.preventDefault(); photoZone.classList.remove('dragover'); });
+    });
+    photoZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handlePhotoUpload(e.dataTransfer.files[0]);
+      }
+    });
+
+    const videoZone = document.getElementById('videoDropZone');
+    ['dragenter', 'dragover'].forEach(name => {
+      videoZone.addEventListener(name, (e) => { e.preventDefault(); videoZone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      videoZone.addEventListener(name, (e) => { e.preventDefault(); videoZone.classList.remove('dragover'); });
+    });
+    videoZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleVideoUpload(e.dataTransfer.files[0]);
+      }
+    });
+
+    // Upload & Run Image Inference
+    async function handlePhotoUpload(file) {
+      if (!file) return;
+      const mode = document.getElementById('photoMode').value;
+      const statusEl = document.getElementById('analysisStatus');
+      statusEl.innerHTML = '<span class="loader"></span> Processing model inference...';
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('mode', mode);
+
+      try {
+        const res = await fetch('/api/analyze-image', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        renderResults(data);
+        statusEl.textContent = 'Completed';
+      } catch (err) {
+        statusEl.textContent = 'Inference Error';
+        console.error(err);
+      }
+    }
+
+    // Load Default Road.jpg Sample
+    async function loadSamplePhoto() {
+      const mode = document.getElementById('photoMode').value;
+      const statusEl = document.getElementById('analysisStatus');
+      statusEl.innerHTML = '<span class="loader"></span> Running sample Road.jpg...';
+
+      try {
+        const res = await fetch(`/api/sample?mode=${mode}`);
+        const data = await res.json();
+        renderResults(data);
+        statusEl.textContent = 'Completed';
+      } catch (err) {
+        statusEl.textContent = 'Failed to load sample';
+      }
+    }
+
+    // Upload & Run Video Inference
+    async function handleVideoUpload(file) {
+      if (!file) return;
+      const mode = document.getElementById('videoMode').value;
+      const statusEl = document.getElementById('analysisStatus');
+      statusEl.innerHTML = '<span class="loader"></span> Analyzing video clip...';
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('mode', mode);
+
+      try {
+        const res = await fetch('/api/analyze-video', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        renderResults(data);
+        statusEl.textContent = 'Video Analysis Completed';
+      } catch (err) {
+        statusEl.textContent = 'Video Error';
+      }
+    }
+
+    // Live Streaming
+    function toggleStream() {
+      const btn = document.getElementById('btnStreamToggle');
+      if (isStreaming) {
+        stopStream();
+      } else {
+        startStream();
+      }
+    }
+
+    function startStream() {
+      const source = encodeURIComponent(document.getElementById('streamUrl').value.trim());
+      const mode = document.getElementById('liveMode').value;
+      const viewerImg = document.getElementById('viewerImg');
+      const emptyBox = document.getElementById('viewerEmpty');
+      const badge = document.getElementById('viewerBadge');
+      const btn = document.getElementById('btnStreamToggle');
+
+      emptyBox.style.display = 'none';
+      viewerImg.style.display = 'block';
+      badge.style.display = 'block';
+      badge.textContent = 'LIVE FEED (ONLINE)';
+      btn.textContent = 'Stop Stream';
+      btn.style.background = '#dc2626';
+
+      // Attach stream URL to MJPEG endpoint
+      viewerImg.src = `/api/stream?source=${source}&mode=${mode}&t=${Date.now()}`;
+      isStreaming = true;
+
+      // Poll telemetry every 600ms
+      streamTimer = setInterval(async () => {
+        try {
+          const res = await fetch('/api/stream-telemetry');
+          if (res.ok) {
+            const telemetry = await res.json();
+            updateTelemetryDisplay(telemetry);
+          }
+        } catch (e) {}
+      }, 600);
+    }
+
+    function stopStream() {
+      const btn = document.getElementById('btnStreamToggle');
+      const viewerImg = document.getElementById('viewerImg');
+      const badge = document.getElementById('viewerBadge');
+
+      btn.textContent = 'Start Stream';
+      btn.style.background = 'var(--accent)';
+      viewerImg.src = '';
+      badge.style.display = 'none';
+      isStreaming = false;
+      if (streamTimer) clearInterval(streamTimer);
+      fetch('/api/stop-stream').catch(() => {});
+    }
+
+    // Render Inferred Results
+    function renderResults(data) {
+      if (!data) return;
+
+      const viewerImg = document.getElementById('viewerImg');
+      const emptyBox = document.getElementById('viewerEmpty');
+      const badge = document.getElementById('viewerBadge');
+      const toggleButtons = document.getElementById('viewToggleButtons');
+
+      emptyBox.style.display = 'none';
+      viewerImg.style.display = 'block';
+      badge.style.display = 'block';
+      toggleButtons.style.display = 'flex';
+
+      currentOverlayUrl = data.overlay_image_base64 ? `data:image/jpeg;base64,${data.overlay_image_base64}` : null;
+      currentOriginalUrl = data.original_image_base64 ? `data:image/jpeg;base64,${data.original_image_base64}` : null;
+
+      if (currentOverlayUrl) {
+        viewerImg.src = currentOverlayUrl;
+        badge.textContent = 'ANNOTATED HUD OVERLAY';
+      }
+
+      updateTelemetryDisplay(data);
+    }
+
+    function toggleView(type) {
+      const viewerImg = document.getElementById('viewerImg');
+      const badge = document.getElementById('viewerBadge');
+      if (type === 'overlay' && currentOverlayUrl) {
+        viewerImg.src = currentOverlayUrl;
+        badge.textContent = 'ANNOTATED HUD OVERLAY';
+      } else if (type === 'original' && currentOriginalUrl) {
+        viewerImg.src = currentOriginalUrl;
+        badge.textContent = 'ORIGINAL SOURCE IMAGE';
+      }
+    }
+
+    // Update Scorecard & Tags
+    function updateTelemetryDisplay(data) {
+      const fusion = data.fusion || {};
+      const perf = data.performance || {};
+      const caps = data.capabilities || {};
+
+      // Risk Badge
+      const risk = fusion.overall_road_safety_risk || 'LOW_RISK';
+      const riskBadge = document.getElementById('riskScoreBadge');
+      riskBadge.textContent = risk.replace('_', ' ');
+      riskBadge.className = 'risk-badge ' + (
+        risk.includes('SEVERE') || risk.includes('CRITICAL') ? 'risk-sev' :
+        (risk.includes('MODERATE') || risk.includes('ELEVATED') ? 'risk-mod' : 'risk-low')
+      );
+
+      // Confidence & Performance
+      const conf = fusion.fusion_confidence ? Math.round(fusion.fusion_confidence * 100) : '--';
+      document.getElementById('metricConfidence').textContent = conf !== '--' ? `${conf}%` : '--';
+
+      const latency = perf.total_pipeline_latency_ms ? `${Math.round(perf.total_pipeline_latency_ms)} ms` : '--';
+      const fps = perf.fps ? ` (${perf.fps} FPS)` : '';
+      document.getElementById('metricLatency').textContent = `${latency}${fps}`;
+
+      const hazardsCount = fusion.detected_hazards_count || 0;
+      document.getElementById('metricHazardsCount').textContent = hazardsCount;
+
+      // Hazards Cards
+      const hazardsContainer = document.getElementById('hazardsList');
+      hazardsContainer.innerHTML = '';
+      const hazards = fusion.hazards || [];
+      if (hazards.length === 0) {
+        hazardsContainer.innerHTML = '<div style="font-size: 0.82rem; color: var(--text-dim); padding: 8px 0;">No active hazards detected. Road surface nominal.</div>';
+      } else {
+        hazards.forEach(h => {
+          const isCrit = (h.risk_level || '').includes('CRITICAL') || (h.risk_level || '').includes('SEVERE');
+          const div = document.createElement('div');
+          div.className = 'hazard-item' + (isCrit ? ' critical' : '');
+          div.innerHTML = `
+            <div class="hazard-title">
+              <span>${(h.hazard_type || 'HAZARD').replace(/_/g, ' ')}</span>
+              <span style="font-size: 0.72rem; color: ${isCrit ? 'var(--red)' : 'var(--amber)'}">${h.risk_level || ''}</span>
+            </div>
+            <div class="hazard-desc">${h.reason || 'Road hazard identified by perceptual cross-modal fusion.'}</div>
+          `;
+          hazardsContainer.appendChild(div);
+        });
+      }
+
+      // Detection Tags Breakdown
+      const tagsContainer = document.getElementById('detectionsList');
+      tagsContainer.innerHTML = '';
+
+      // Count damage
+      const damagePreds = caps.damage?.predictions || [];
+      const potholes = damagePreds.filter(d => (d.class_name || '').toLowerCase().includes('pothole')).length;
+      const cracks = damagePreds.filter(d => (d.class_name || '').toLowerCase().includes('crack')).length;
+      if (potholes > 0) tagsContainer.innerHTML += `<span class="tag-item tag-pothole">Potholes: ${potholes}</span>`;
+      if (cracks > 0) tagsContainer.innerHTML += `<span class="tag-item tag-crack">Cracks: ${cracks}</span>`;
+
+      // Vehicles count
+      const vehicles = caps.vehicles?.predictions || [];
+      if (vehicles.length > 0) {
+        tagsContainer.innerHTML += `<span class="tag-item tag-vehicle">Vehicles: ${vehicles.length}</span>`;
+      }
+
+      // Surface
+      const surf = caps.surface?.predictions || {};
+      if (surf.material) {
+        tagsContainer.innerHTML += `<span class="tag-item">Material: ${surf.material}</span>`;
+      }
+
+      // Water
+      const water = caps.water?.predictions || {};
+      if (water.standing_water_present || (water.pct_road_submerged || 0) > 0) {
+        tagsContainer.innerHTML += `<span class="tag-item" style="border-color: rgba(6, 182, 212, 0.4); color: #a5f3fc;">Waterlogged: ${water.pct_road_submerged || 0}%</span>`;
+      }
+
+      if (tagsContainer.children.length === 0) {
+        tagsContainer.innerHTML = '<span class="tag-item">Nominal Scan (Clean Road)</span>';
+      }
+    }
+  </script>
+</body>
+</html>

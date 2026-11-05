@@ -291,9 +291,21 @@ pytest tests
 
 ---
 
-## 7. Command-Line Reference
+## 7. Execution Interfaces & Command Reference
 
-### 7.1 Single-Image or Batch Inference (`main.py`)
+### 7.1 Minimalist Web Dashboard (`app.py`)
+Launch the modern, minimalist web dashboard:
+```bash
+python app.py
+```
+Then navigate to **`http://127.0.0.1:8000`** in any web browser:
+- **Photo Drag & Drop**: Drop any road photo for instant hazard scoring, pothole identification, vehicle classification, and side-by-side original/overlay toggle.
+- **Video Analysis**: Upload dashcam video clips for collision analysis and vehicle trajectory tracking.
+- **Live Camera Feed**: Connect phone IP webcam streams (`http://<ip>:8080/video`) or USB webcams with live telemetry polling and safety risk scorecards.
+
+---
+
+### 7.2 Single-Image or Batch Inference (`main.py`)
 ```bash
 # 1. Complete multi-modal pipeline on an image:
 python main.py --mode all --source Road.jpg
