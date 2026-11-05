@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYPhER — 3D Physics World</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#000;overflow:hidden;font-family:'Inter',sans-serif;color:#fff;}
+  #canvas-wrap{position:fixed;inset:0;z-index:0;}
+  canvas{display:block;width:100%!important;height:100%!important;}
+
+  /* HUD overlay */
+  #hud{position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none;}
+  #hud-top{display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;}
+  .hud-box{background:rgba(10,10,14,0.82);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;backdrop-filter:blur(8px);}
+  .hud-title{font-size:0.65rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,0.4);margin-bottom:6px;}
+  .hud-val{font-size:1.05rem;font-weight:700;color:#fff;}
+  .hud-unit{font-size:0.7rem;color:rgba(255,255,255,0.45);margin-left:3px;}
+  .hud-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .hud-metric{display:flex;flex-direction:column;min-width:72px;}
+  .hud-metric .label{font-size:0.6rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,0.35);}
+  .hud-metric .val{font-size:0.85rem;font-weight:600;color:#fff;}
+  .risk-low{color:#4ade80!important;}
+  .risk-med{color:#fbbf24!important;}
+  .risk-high{color:#f87171!important;}
+  .risk-crit{color:#ff0040!important;animation:blink .5s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* Side control dock */
+  #ctrl{position:fixed;top:0;right:0;bottom:0;width:260px;z-index:20;display:flex;flex-direction:column;gap:0;pointer-events:all;}
+  #ctrl-inner{background:rgba(8,8,12,0.9);border-left:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(12px);height:100%;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:12px;}
+  .ctrl-section{display:flex;flex-direction:column;gap:7px;}
+  .ctrl-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:.09em;color:rgba(255,255,255,0.35);padding-bottom:2px;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+  .btn{padding:7px 8px;font-size:0.72rem;font-weight:600;border:1px solid rgba(255,255,255,0.1);border-radius:5px;cursor:pointer;background:rgba(255,255,255,0.04);color:#fff;transition:all .15s;text-align:center;letter-spacing:.02em;}
+  .btn:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25);}
+  .btn-danger{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.3);color:#fca5a5;}
+  .btn-danger:hover{background:rgba(239,68,68,0.3);}
+  .btn-warn{background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.3);color:#fde68a;}
+  .btn-warn:hover{background:rgba(251,191,36,0.25);}
+  .btn-blue{background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.3);color:#93c5fd;}
+  .btn-blue:hover{background:rgba(59,130,246,0.25);}
+  .btn-full{grid-column:1/-1;}
+  .slider-row{display:flex;flex-direction:column;gap:3px;}
+  .slider-top{display:flex;justify-content:space-between;font-size:0.7rem;color:rgba(255,255,255,0.45);}
+  .slider-top .sv{color:#fff;font-weight:600;}
+  input[type=range]{width:100%;height:5px;border-radius:3px;accent-color:#3b82f6;background:#1e1e28;outline:none;cursor:pointer;}
+  .road-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;}
+  .rbtn{padding:6px 5px;font-size:0.65rem;text-align:center;border-radius:4px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);cursor:pointer;color:rgba(255,255,255,0.6);transition:all .15s;}
+  .rbtn:hover,.rbtn.active{border-color:#3b82f6;background:rgba(59,130,246,0.15);color:#fff;}
+  .rbtn.active{font-weight:600;}
+
+  /* Incident log */
+  #log{font-size:0.67rem;font-family:monospace;max-height:170px;overflow-y:auto;background:#08080e;border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:7px 9px;display:flex;flex-direction:column;gap:2px;}
+  #log .li{padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+  #log .li.crash{color:#f87171;}
+  #log .li.warn{color:#fbbf24;}
+  #log .li.info{color:#60a5fa;}
+  #log .li.ok{color:#4ade80;}
+
+  /* Mini speedometer bottom left */
+  #speedo{position:fixed;bottom:16px;left:16px;z-index:20;width:120px;height:120px;pointer-events:none;}
+  #speedo canvas{width:120px!important;height:120px!important;}
+
+  /* Stats bottom center */
+  #stats-bar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:10px;pointer-events:none;}
+  .stat-pill{background:rgba(10,10,14,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:5px 14px;font-size:0.7rem;display:flex;gap:6px;align-items:center;backdrop-filter:blur(8px);}
+  .stat-pill .sp-label{color:rgba(255,255,255,0.4);}
+  .stat-pill .sp-val{color:#fff;font-weight:700;}
+
+  /* Loading */
+  #loading{position:fixed;inset:0;background:#000;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+  #loading h2{font-size:1.1rem;letter-spacing:.1em;text-transform:uppercase;}
+  #loading p{font-size:0.75rem;color:rgba(255,255,255,0.4);}
+  .load-bar{width:200px;height:3px;background:#1a1a22;border-radius:2px;overflow:hidden;}
+  .load-fill{height:100%;width:0%;background:#3b82f6;border-radius:2px;transition:width .3s;}
+
+  /* Crosshair */
+  #xhair{position:fixed;top:50%;left:calc(50% - 130px);transform:translate(-50%,-50%);z-index:5;pointer-events:none;opacity:0.3;}
+  #xhair::before,#xhair::after{content:'';position:absolute;background:#fff;}
+  #xhair::before{width:1px;height:14px;top:-7px;left:0;}
+  #xhair::after{width:14px;height:1px;top:0;left:-7px;}
+
+  /* Camera mode indicator */
+  #cam-mode{position:fixed;bottom:16px;right:276px;z-index:20;font-size:0.65rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,0.35);background:rgba(10,10,14,0.8);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:4px 8px;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <h2>CYPhER Physics World</h2>
+  <p id="load-msg">Initializing Three.js scene…</p>
+  <div class="load-bar"><div class="load-fill" id="load-fill"></div></div>
+</div>
+
+<div id="canvas-wrap"><canvas id="c"></canvas></div>
+
+<!-- HUD top -->
+<div id="hud">
+  <div id="hud-top">
+    <div class="hud-box">
+      <div class="hud-title">Road Telemetry</div>
+      <div class="hud-row">
+        <div class="hud-metric"><span class="label">Speed</span><span class="val" id="hv-spd">0</span><span style="font-size:.6rem;color:rgba(255,255,255,.35)">km/h</span></div>
+        <div class="hud-metric"><span class="label">μ Friction</span><span class="val" id="hv-mu">0.85</span></div>
+        <div class="hud-metric"><span class="label">Stop Dist</span><span class="val" id="hv-stop">—</span></div>
+        <div class="hud-metric"><span class="label">Risk</span><span class="val risk-low" id="hv-risk">LOW</span></div>
+      </div>
+    </div>
+    <div class="hud-box" style="text-align:right;">
+      <div class="hud-title">World Status</div>
+      <div class="hud-row" style="justify-content:flex-end;">
+        <div class="hud-metric"><span class="label">Vehicles</span><span class="val" id="hv-vcount">0</span></div>
+        <div class="hud-metric"><span class="label">Crashes</span><span class="val" id="hv-crashes">0</span></div>
+        <div class="hud-metric"><span class="label">Potholes</span><span class="val" id="hv-ph">0</span></div>
+        <div class="hud-metric"><span class="label">Surface</span><span class="val" id="hv-surf">Dry</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="xhair"></div>
+
+<!-- Side controls -->
+<div id="ctrl">
+<div id="ctrl-inner">
+
+  <div style="font-size:0.85rem;font-weight:700;letter-spacing:.04em;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);">
+    CYPhER <span style="color:rgba(255,255,255,.35);font-weight:400;">Physics World</span>
+  </div>
+
+  <div class="ctrl-section">
+    <div class="ctrl-label">Road Surface</div>
+    <div class="road-btns">
+      <div class="rbtn active" onclick="setRoad('dry')" id="rb-dry">🟫 Dry</div>
+      <div class="rbtn" onclick="setRoad('wet')" id="rb-wet">🌧 Wet</div>
+      <div class="rbtn" onclick="setRoad('water')" id="rb-water">💧 Flood</div>
+      <div class="rbtn" onclick="setRoad('ice')" id="rb-ice">🧊 Ice</div>
+    </div>
+  </div>
+
+  <div class="ctrl-section">
+    <div class="ctrl-label">Speed Control</div>
+    <div class="slider-row">
+      <div class="slider-top"><span>Vehicle Speed</span><span class="sv" id="sv-speed">60</span><span> km/h</span></div>
+      <input type="range" id="sl-speed" min="10" max="130" value="60" oninput="onSpeedChange(this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-top"><span>Sight Distance</span><span class="sv" id="sv-sight">50</span><span> m</span></div>
+      <input type="range" id="sl-sight" min="10" max="120" value="50" oninput="document.getElementById('sv-sight').textContent=this.value;updatePhysicsHUD()">
+    </div>
+    <div class="slider-row">
+      <div class="slider-top"><span>AI Vehicles</span><span class="sv" id="sv-ai">3</span></div>
+      <input type="range" id="sl-ai" min="0" max="10" value="3" oninput="document.getElementById('sv-ai').textContent=this.value;setAICount(parseInt(this.value))">
+    </div>
+  </div>
+
+  <div class="ctrl-section">
+    <div class="ctrl-label">Spawn</div>
+    <div class="btn-row">
+      <button class="btn btn-blue" onclick="spawnVehicle('sedan')">+ Sedan</button>
+      <button class="btn btn-blue" onclick="spawnVehicle('truck')">+ Truck</button>
+      <button class="btn btn-blue" onclick="spawnVehicle('ambulance')">+ Ambulance</button>
+      <button class="btn btn-blue" onclick="spawnVehicle('bus')">+ Bus</button>
+      <button class="btn btn-warn btn-full" onclick="dropPothole()">⚠ Drop Pothole</button>
+      <button class="btn btn-warn btn-full" onclick="dropWaterPuddle()">💧 Drop Water Puddle</button>
+    </div>
+  </div>
+
+  <div class="ctrl-section">
+    <div class="ctrl-label">Scenarios</div>
+    <div class="btn-row">
+      <button class="btn btn-danger btn-full" onclick="simulateCrash()">🔥 Crash Scenario</button>
+      <button class="btn btn-warn btn-full" onclick="emergencyBrake()">🛑 Emergency Brake All</button>
+      <button class="btn btn-full" onclick="resetWorld()">↺ Reset World</button>
+    </div>
+  </div>
+
+  <div class="ctrl-section">
+    <div class="ctrl-label">Camera</div>
+    <div class="btn-row">
+      <button class="btn" onclick="setCam('orbit')">Orbit</button>
+      <button class="btn" onclick="setCam('top')">Top Down</button>
+      <button class="btn" onclick="setCam('chase')">Chase</button>
+      <button class="btn" onclick="setCam('cinematic')">Cinematic</button>
+    </div>
+  </div>
+
+  <div class="ctrl-section">
+    <div class="ctrl-label">Incident Log</div>
+    <div id="log"><span class="li info">— System ready —</span></div>
+  </div>
+
+  <div class="ctrl-section">
+    <div class="ctrl-label">Physics</div>
+    <div id="phys-panel" style="font-size:0.68rem;color:rgba(255,255,255,0.5);line-height:1.6;"></div>
+  </div>
+
+</div>
+</div>
+
+<div id="cam-mode">ORBIT VIEW</div>
+
+<!-- Stats bar bottom -->
+<div id="stats-bar">
+  <div class="stat-pill"><span class="sp-label">FPS</span><span class="sp-val" id="sp-fps">60</span></div>
+  <div class="stat-pill"><span class="sp-label">Physics</span><span class="sp-val" id="sp-phys">0ms</span></div>
+  <div class="stat-pill"><span class="sp-label">Bodies</span><span class="sp-val" id="sp-bodies">0</span></div>
+</div>
+
+<!-- Speedometer canvas -->
+<canvas id="speedo-canvas" width="120" height="120" style="position:fixed;bottom:16px;left:16px;z-index:20;width:120px;height:120px;"></canvas>
+
+<!-- Three.js r158 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Cannon-es physics -->
+<script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CYPHER 3D PHYSICS WORLD
+// Three.js r128 + Cannon-es 0.20 + Custom Vehicle Physics
+// ═══════════════════════════════════════════════════════════════
+
+const G = 9.82;
+let SCENE, CAMERA, RENDERER, PHYSICS_WORLD;
+let clock, delta;
+let vehicles = [], aiVehicles = [], potholes = [], puddles = [];
+let crashCount = 0, potholeCount = 0;
+let targetAICount = 3;
+let camMode = 'orbit';
+let chaseTarget = null;
+let cinematicAngle = 0;
+let orbitControls = null;
+let orbitAngH = Math.PI/4, orbitAngV = 0.55, orbitRadius = 55, orbitTarget = new THREE.Vector3(0,0,0);
+let mouseDown = false, lastMX = 0, lastMY = 0;
+let frameCount = 0, lastFPSTime = performance.now();
+let physStartTime = 0;
+
+// Road state
+let roadSurface = 'dry';
+const SURFACE_MU = { dry:0.85, wet:0.50, water:0.22, ice:0.10 };
+const SURFACE_NAMES = { dry:'Dry Asphalt', wet:'Wet Pavement', water:'Flooded Road', ice:'Icy Surface' };
+const SURFACE_COLORS = { dry:0x1a1a1a, wet:0x111820, water:0x0a1a2e, ice:0xd0e8ff };
+
+let playerSpeed = 60; // km/h
+let roadGroundBody, roadMesh, groundMeshes = [];
+
+function setLoadMsg(msg, pct) {
+  document.getElementById('load-msg').textContent = msg;
+  document.getElementById('load-fill').style.width = pct+'%';
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+async function init() {
+  setLoadMsg('Creating physics world…', 10);
+  initPhysics();
+
+  setLoadMsg('Building Three.js scene…', 25);
+  initScene();
+
+  setLoadMsg('Generating road network…', 40);
+  buildWorld();
+
+  setLoadMsg('Spawning initial traffic…', 65);
+  for(let i=0;i<targetAICount;i++) spawnAIVehicle();
+
+  setLoadMsg('Starting render loop…', 85);
+  clock = new THREE.Clock();
+  requestAnimationFrame(loop);
+
+  setLoadMsg('Ready!', 100);
+  setTimeout(()=>{ document.getElementById('loading').style.display='none'; },600);
+
+  logMsg('World initialized — Road: Dry Asphalt μ=0.85', 'ok');
+  updatePhysicsHUD();
+}
+
+// ─── PHYSICS WORLD ────────────────────────────────────────────
+function initPhysics() {
+  PHYSICS_WORLD = new CANNON.World({ gravity: new CANNON.Vec3(0, -G*1.0, 0) });
+  PHYSICS_WORLD.broadphase = new CANNON.SAPBroadphase(PHYSICS_WORLD);
+  PHYSICS_WORLD.allowSleep = true;
+  PHYSICS_WORLD.defaultContactMaterial.friction = SURFACE_MU[roadSurface];
+  PHYSICS_WORLD.defaultContactMaterial.restitution = 0.15;
+}
+
+// ─── THREE.JS SCENE ───────────────────────────────────────────
+function initScene() {
+  SCENE = new THREE.Scene();
+  SCENE.background = new THREE.Color(0x0a0c12);
+  SCENE.fog = new THREE.Fog(0x0a0c12, 80, 220);
+
+  CAMERA = new THREE.PerspectiveCamera(55, window.innerWidth/(window.innerHeight), 0.5, 500);
+  CAMERA.position.set(-30, 30, 55);
+  CAMERA.lookAt(0,0,0);
+
+  RENDERER = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+  RENDERER.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  RENDERER.setSize(window.innerWidth, window.innerHeight);
+  RENDERER.shadowMap.enabled = true;
+  RENDERER.shadowMap.type = THREE.PCFSoftShadowMap;
+  RENDERER.toneMapping = THREE.ACESFilmicToneMapping;
+  RENDERER.toneMappingExposure = 0.9;
+
+  // Lighting
+  const ambient = new THREE.AmbientLight(0x334466, 0.6);
+  SCENE.add(ambient);
+
+  const sun = new THREE.DirectionalLight(0xfff5e0, 1.4);
+  sun.position.set(40, 80, 30);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far = 300;
+  sun.shadow.camera.left = sun.shadow.camera.bottom = -100;
+  sun.shadow.camera.right = sun.shadow.camera.top = 100;
+  SCENE.add(sun);
+
+  const hemi = new THREE.HemisphereLight(0x334499, 0x222200, 0.4);
+  SCENE.add(hemi);
+
+  // Stars / sky dots
+  const starGeo = new THREE.BufferGeometry();
+  const sv = [];
+  for(let i=0;i<2000;i++){
+    sv.push((Math.random()-0.5)*600, Math.random()*150+30, (Math.random()-0.5)*600);
+  }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sv,3));
+  SCENE.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xffffff,size:0.3,sizeAttenuation:true})));
+
+  window.addEventListener('resize', ()=>{
+    CAMERA.aspect = window.innerWidth/window.innerHeight;
+    CAMERA.updateProjectionMatrix();
+    RENDERER.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Mouse orbit
+  const cv = document.getElementById('c');
+  cv.addEventListener('mousedown', e=>{
+    if(e.button===0 && camMode==='orbit'){mouseDown=true;lastMX=e.clientX;lastMY=e.clientY;}
+  });
+  window.addEventListener('mouseup', ()=>mouseDown=false);
+  window.addEventListener('mousemove', e=>{
+    if(!mouseDown||camMode!=='orbit') return;
+    const dx=(e.clientX-lastMX)*0.005, dy=(e.clientY-lastMY)*0.004;
+    orbitAngH-=dx; orbitAngV=Math.max(0.08,Math.min(1.4,orbitAngV+dy));
+    lastMX=e.clientX; lastMY=e.clientY;
+  });
+  cv.addEventListener('wheel', e=>{
+    if(camMode!=='orbit') return;
+    orbitRadius=Math.max(8,Math.min(150,orbitRadius+e.deltaY*0.08));
+  });
+}
+
+// ─── WORLD GEOMETRY ───────────────────────────────────────────
+function buildWorld() {
+  // Ground plane physics
+  const groundMat = new CANNON.Material('ground');
+  const groundBody = new CANNON.Body({ mass:0, material:groundMat });
+  groundBody.addShape(new CANNON.Plane());
+  groundBody.quaternion.setFromEuler(-Math.PI/2, 0, 0);
+  PHYSICS_WORLD.addBody(groundBody);
+  roadGroundBody = groundBody;
+
+  // Road network — cruciform intersection
+  buildRoadNetwork();
+  buildBuildings();
+  buildStreetLights();
+  buildTrees();
+}
+
+function buildRoadNetwork() {
+  // Clear old
+  groundMeshes.forEach(m=>SCENE.remove(m));
+  groundMeshes = [];
+
+  const roadColor = SURFACE_COLORS[roadSurface];
+
+  // Ground base (grass/dirt)
+  const groundGeo = new THREE.PlaneGeometry(400,400);
+  const groundMat3 = new THREE.MeshLambertMaterial({color:0x0d1a0d});
+  const groundMesh = new THREE.Mesh(groundGeo, groundMat3);
+  groundMesh.rotation.x = -Math.PI/2;
+  groundMesh.receiveShadow = true;
+  SCENE.add(groundMesh);
+  groundMeshes.push(groundMesh);
+
+  // Road segments
+  const roadMat = new THREE.MeshLambertMaterial({color:roadColor});
+
+  // Main horizontal road (EW)
+  const ew = new THREE.Mesh(new THREE.PlaneGeometry(400,20), roadMat);
+  ew.rotation.x=-Math.PI/2; ew.position.y=0.01; ew.receiveShadow=true;
+  SCENE.add(ew); groundMeshes.push(ew);
+
+  // Main vertical road (NS)
+  const ns = new THREE.Mesh(new THREE.PlaneGeometry(20,400), roadMat);
+  ns.rotation.x=-Math.PI/2; ns.position.y=0.01; ns.receiveShadow=true;
+  SCENE.add(ns); groundMeshes.push(ns);
+
+  // Road markings — center dashes (EW)
+  for(let x=-190;x<190;x+=10) {
+    if(Math.abs(x)<12) continue;
+    const dm = new THREE.Mesh(
+      new THREE.PlaneGeometry(5,0.3),
+      new THREE.MeshBasicMaterial({color:0xffff88})
+    );
+    dm.rotation.x=-Math.PI/2; dm.position.set(x,0.03,0);
+    SCENE.add(dm); groundMeshes.push(dm);
+  }
+  // Center dashes (NS)
+  for(let z=-190;z<190;z+=10) {
+    if(Math.abs(z)<12) continue;
+    const dm = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3,5),
+      new THREE.MeshBasicMaterial({color:0xffff88})
+    );
+    dm.rotation.x=-Math.PI/2; dm.position.set(0,0.03,z);
+    SCENE.add(dm); groundMeshes.push(dm);
+  }
+
+  // Shoulder lines (EW)
+  [-9,9].forEach(zo=>{
+    const sl = new THREE.Mesh(
+      new THREE.PlaneGeometry(400,0.25),
+      new THREE.MeshBasicMaterial({color:0xffffff})
+    );
+    sl.rotation.x=-Math.PI/2; sl.position.set(0,0.02,zo);
+    SCENE.add(sl); groundMeshes.push(sl);
+  });
+  // Shoulder lines (NS)
+  [-9,9].forEach(xo=>{
+    const sl = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.25,400),
+      new THREE.MeshBasicMaterial({color:0xffffff})
+    );
+    sl.rotation.x=-Math.PI/2; sl.position.set(xo,0.02,0);
+    SCENE.add(sl); groundMeshes.push(sl);
+  });
+
+  // Water puddle effect on flooded road
+  if(roadSurface==='water') {
+    const puddleGeo = new THREE.PlaneGeometry(400,20);
+    const puddleMat = new THREE.MeshLambertMaterial({color:0x0a3050,transparent:true,opacity:0.65});
+    const pm = new THREE.Mesh(puddleGeo, puddleMat);
+    pm.rotation.x=-Math.PI/2; pm.position.set(0,0.025,0);
+    SCENE.add(pm); groundMeshes.push(pm);
+    const pm2 = pm.clone(); pm2.rotation.z=Math.PI/2; pm2.position.set(0,0.025,0);
+    SCENE.add(pm2); groundMeshes.push(pm2);
+  }
+
+  // Ice sheen
+  if(roadSurface==='ice') {
+    const im = new THREE.Mesh(
+      new THREE.PlaneGeometry(400,20),
+      new THREE.MeshLambertMaterial({color:0xb8d4ee,transparent:true,opacity:0.45})
+    );
+    im.rotation.x=-Math.PI/2; im.position.set(0,0.025,0);
+    SCENE.add(im); groundMeshes.push(im);
+  }
+}
+
+function buildBuildings() {
+  const palettes = [0x1a1e2a, 0x1e2030, 0x242830, 0x1c2028, 0x151920];
+  const positions = [
+    [25,25],[25,-25],[-25,25],[-25,-25],
+    [45,15],[45,-15],[-45,15],[-45,-15],
+    [60,30],[60,-30],[-60,30],[-60,-30],
+    [80,20],[80,-20],[-80,20],[-80,-20],
+  ];
+  positions.forEach(([x,z])=>{
+    const w = 8+Math.random()*10, d = 8+Math.random()*10, h = 10+Math.random()*30;
+    const geo = new THREE.BoxGeometry(w,h,d);
+    const mat = new THREE.MeshLambertMaterial({color:palettes[Math.floor(Math.random()*palettes.length)]});
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, h/2, z);
+    m.castShadow=true; m.receiveShadow=true;
+    SCENE.add(m);
+
+    // Windows
+    for(let wy=2;wy<h-2;wy+=4) {
+      for(let wx=-w/2+1.5;wx<w/2-1;wx+=3) {
+        const wm = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.2,1.5),
+          new THREE.MeshBasicMaterial({color: Math.random()>0.6?0xfff5a0:0x222244})
+        );
+        wm.position.set(x+wx, wy, z+d/2+0.01);
+        SCENE.add(wm);
+      }
+    }
+  });
+}
+
+function buildStreetLights() {
+  const lightPositions = [
+    [-50,10],[0,10],[50,10],[-50,-10],[0,-10],[50,-10],
+    [10,-50],[10,0],[10,50],[-10,-50],[-10,0],[-10,50]
+  ];
+  lightPositions.forEach(([x,z])=>{
+    // Pole
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.1,0.1,8),
+      new THREE.MeshLambertMaterial({color:0x888888})
+    );
+    pole.position.set(x,4,z);
+    SCENE.add(pole);
+
+    // Light head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(1.2,0.3,0.4),
+      new THREE.MeshLambertMaterial({color:0x444444})
+    );
+    head.position.set(x,8.2,z);
+    SCENE.add(head);
+
+    // Point light
+    const ptl = new THREE.PointLight(0xfff5cc, 0.8, 25);
+    ptl.position.set(x,8,z);
+    SCENE.add(ptl);
+  });
+}
+
+function buildTrees() {
+  for(let i=0;i<40;i++) {
+    let x,z;
+    do {
+      x=(Math.random()-0.5)*180; z=(Math.random()-0.5)*180;
+    } while(Math.abs(x)<14 || Math.abs(z)<14);
+
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.2,0.3,2),
+      new THREE.MeshLambertMaterial({color:0x3d2b1a})
+    );
+    trunk.position.set(x,1,z);
+    SCENE.add(trunk);
+
+    const foliage = new THREE.Mesh(
+      new THREE.SphereGeometry(1.8+Math.random()*1.2, 7, 6),
+      new THREE.MeshLambertMaterial({color:0x1a4d1a})
+    );
+    foliage.position.set(x, 3.5+Math.random(), z);
+    SCENE.add(foliage);
+  }
+}
+
+// ─── VEHICLE CLASS ────────────────────────────────────────────
+const VEHICLE_SPECS = {
+  sedan:     { w:2.0, h:0.8, l:4.2, mass:1200, color:null, speed:55, name:'Sedan' },
+  truck:     { w:2.4, h:1.4, l:7.0, mass:5000, color:0xdd4411, speed:40, name:'Truck' },
+  ambulance: { w:2.1, h:1.5, l:5.0, mass:2200, color:0xffffff, speed:65, name:'Ambulance' },
+  bus:       { w:2.5, h:2.0, l:9.0, mass:8000, color:0xddcc00, speed:45, name:'Bus' },
+};
+
+const BODY_COLORS = [0x2255ff,0xff4422,0x22bb44,0xddcc22,0xcc44cc,0x44cccc,0xff8800,0xffffff,0x111111];
+
+class PhysicsVehicle {
+  constructor(type, pos, dir=1) {
+    this.type = type;
+    this.spec = {...VEHICLE_SPECS[type]};
+    this.spec.color = this.spec.color || BODY_COLORS[Math.floor(Math.random()*BODY_COLORS.length)];
+    this.alive = true;
+    this.crashed = false;
+    this.crashTimer = 0;
+    this.speedKmh = this.spec.speed;
+    this.targetSpeed = this.spec.speed;
+    this.direction = dir; // 1=+X or -1=-X, or 2=+Z, -2=-Z
+    this.braking = false;
+    this.crashImpulse = null;
+    this.spinOut = false;
+    this.spinTimer = 0;
+
+    this._buildMesh(pos);
+    this._buildBody(pos);
+  }
+
+  _buildMesh(pos) {
+    this.group = new THREE.Group();
+    const s = this.spec;
+
+    // Body
+    this.bodyMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(s.l, s.h, s.w),
+      new THREE.MeshLambertMaterial({color: s.color})
+    );
+    this.bodyMesh.castShadow = true;
+    this.bodyMesh.receiveShadow = true;
+    this.group.add(this.bodyMesh);
+
+    // Roof (sedan/ambulance)
+    if(this.type==='sedan'||this.type==='ambulance') {
+      const roof = new THREE.Mesh(
+        new THREE.BoxGeometry(s.l*0.5, s.h*0.6, s.w*0.9),
+        new THREE.MeshLambertMaterial({color: s.color})
+      );
+      roof.position.y = s.h*0.8;
+      roof.position.x = -s.l*0.05;
+      this.group.add(roof);
+    }
+
+    // Windows
+    const winMat = new THREE.MeshLambertMaterial({color:0x88aacc, transparent:true, opacity:0.7});
+    // Windshield
+    const ws = new THREE.Mesh(new THREE.PlaneGeometry(s.w*0.85, s.h*0.5), winMat);
+    ws.position.set(s.l*0.5+0.01, s.h*0.6, 0);
+    ws.rotation.y = Math.PI/2;
+    this.group.add(ws);
+
+    // Headlights
+    [[s.l*0.52, s.h*0.1, s.w*0.3],[s.l*0.52, s.h*0.1, -s.w*0.3]].forEach(([lx,ly,lz])=>{
+      const hl = new THREE.Mesh(
+        new THREE.SphereGeometry(0.15,6,6),
+        new THREE.MeshBasicMaterial({color:0xffffee})
+      );
+      hl.position.set(lx,ly,lz);
+      this.group.add(hl);
+      const pl = new THREE.PointLight(0xfff5cc, 0.6, 15);
+      pl.position.set(lx,ly,lz);
+      this.group.add(pl);
+    });
+
+    // Tail lights
+    [[-(s.l*0.52), s.h*0.1, s.w*0.3],[-(s.l*0.52), s.h*0.1, -s.w*0.3]].forEach(([lx,ly,lz])=>{
+      const tl = new THREE.Mesh(
+        new THREE.SphereGeometry(0.12,6,6),
+        new THREE.MeshBasicMaterial({color:0xff2222})
+      );
+      tl.position.set(lx,ly,lz);
+      this.group.add(tl);
+    });
+
+    // Wheels (4)
+    const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.22, 10);
+    const wheelMat = new THREE.MeshLambertMaterial({color:0x111111});
+    [
+      [s.l*0.4, -s.h*0.45, s.w*0.5],
+      [s.l*0.4, -s.h*0.45, -s.w*0.5],
+      [-s.l*0.4, -s.h*0.45, s.w*0.5],
+      [-s.l*0.4, -s.h*0.45, -s.w*0.5],
+    ].forEach(wp=>{
+      const w = new THREE.Mesh(wheelGeo, wheelMat);
+      w.rotation.z = Math.PI/2;
+      w.position.set(...wp);
+      this.group.add(w);
+    });
+
+    // Ambulance siren lights
+    if(this.type==='ambulance') {
+      this.sirenR = new THREE.PointLight(0xff2222, 2, 8);
+      this.sirenB = new THREE.PointLight(0x2222ff, 2, 8);
+      this.sirenR.position.set(0, s.h+0.6, 0);
+      this.sirenB.position.set(0, s.h+0.6, 0);
+      this.group.add(this.sirenR);
+      this.group.add(this.sirenB);
+    }
+
+    this.group.position.set(pos.x, pos.y || (s.h/2 + 0.35), pos.z || 0);
+    // Rotate based on direction
+    if(Math.abs(this.direction)===2) this.group.rotation.y = Math.PI/2;
+    if(this.direction===-1) this.group.rotation.y = Math.PI;
+    if(this.direction===-2) this.group.rotation.y = -Math.PI/2;
+
+    SCENE.add(this.group);
+  }
+
+  _buildBody(pos) {
+    const s = this.spec;
+    const shape = new CANNON.Box(new CANNON.Vec3(s.l/2, s.h/2, s.w/2));
+    this.body = new CANNON.Body({ mass: s.mass, linearDamping: 0.4, angularDamping: 0.9 });
+    this.body.addShape(shape);
+    this.body.position.set(pos.x, pos.y || (s.h/2 + 0.35), pos.z || 0);
+    this.body.allowSleep = false;
+    PHYSICS_WORLD.addBody(this.body);
+  }
+
+  update(dt) {
+    if(!this.alive) return;
+
+    const mu = SURFACE_MU[roadSurface];
+    const speedMs = this.speedKmh / 3.6;
+
+    // Siren flash
+    if(this.type==='ambulance' && this.sirenR) {
+      const t = Date.now()*0.004;
+      this.sirenR.intensity = Math.sin(t)*1.5+1.5;
+      this.sirenB.intensity = Math.cos(t)*1.5+1.5;
+    }
+
+    if(this.crashed) {
+      this.crashTimer += dt;
+      if(this.crashTimer>0.5) {
+        // Gradual stop
+        this.speedKmh = Math.max(0, this.speedKmh - 20*dt);
+        this.body.velocity.scale(0.92, this.body.velocity);
+      }
+      return;
+    }
+
+    // Braking logic
+    if(this.braking) {
+      const decel = mu * G * 1000 * dt; // km/h per second
+      this.speedKmh = Math.max(0, this.speedKmh - decel*dt*8);
+    } else {
+      // Accelerate toward target speed
+      const accel = this.spec.mass < 3000 ? 8 : 4;
+      if(this.speedKmh < this.targetSpeed) this.speedKmh += accel*dt;
+      else if(this.speedKmh > this.targetSpeed) this.speedKmh -= accel*dt;
+    }
+
+    // Pothole effect — random swerve/slow
+    potholes.forEach(ph=>{
+      const dx = this.group.position.x - ph.mesh.position.x;
+      const dz = this.group.position.z - ph.mesh.position.z;
+      const dist = Math.sqrt(dx*dx+dz*dz);
+      if(dist < 3) {
+        this.speedKmh *= 0.92;
+        this.body.applyImpulse(
+          new CANNON.Vec3((Math.random()-0.5)*800, 300, (Math.random()-0.5)*800),
+          this.body.position
+        );
+        if(!this.spinOut) logMsg(`${this.spec.name} hit pothole! Suspension shock.`,'warn');
+        this.spinOut = true; this.spinTimer = 0.5;
+      }
+    });
+
+    // Water puddle effect
+    puddles.forEach(pu=>{
+      const dx = this.group.position.x - pu.position.x;
+      const dz = this.group.position.z - pu.position.z;
+      const dist = Math.sqrt(dx*dx+dz*dz);
+      if(dist < 4 && !pu._logged) {
+        pu._logged = true;
+        this.speedKmh *= 0.80;
+        logMsg(`${this.spec.name} hydroplaning! μ→${mu.toFixed(2)}`,'warn');
+        setTimeout(()=>{ pu._logged=false; }, 2000);
+      }
+    });
+
+    // Spin out decay
+    if(this.spinOut) {
+      this.spinTimer -= dt;
+      if(this.spinTimer<=0) this.spinOut=false;
+    }
+
+    // Move: apply velocity in correct direction
+    const vMs = this.speedKmh / 3.6;
+    if(Math.abs(this.direction)===1) {
+      this.body.velocity.x = vMs * Math.sign(this.direction);
+      if(!this.spinOut) this.body.velocity.z *= 0.85;
+    } else {
+      this.body.velocity.z = vMs * Math.sign(this.direction>0?1:-1) * (this.direction/Math.abs(this.direction));
+      if(!this.spinOut) this.body.velocity.x *= 0.85;
+    }
+
+    // Keep on road (soft constraint)
+    const p = this.body.position;
+    if(Math.abs(this.direction)===1 && Math.abs(p.z)>8) p.z *= 0.95;
+    if(Math.abs(this.direction)===2 && Math.abs(p.x)>8) p.x *= 0.95;
+
+    // Loop on road
+    if(Math.abs(p.x) > 180) { p.x = -170 * Math.sign(p.x); }
+    if(Math.abs(p.z) > 180) { p.z = -170 * Math.sign(p.z); }
+
+    // Sync mesh to physics body
+    this.group.position.copy(this.body.position);
+    if(!this.spinOut) {
+      // Smooth rotation toward direction
+      const tY = this.direction===1?0 : this.direction===-1?Math.PI : this.direction===2?Math.PI/2:-Math.PI/2;
+      this.group.rotation.y += (tY - this.group.rotation.y) * 0.08;
+    } else {
+      this.group.rotation.y += (Math.random()-0.5)*0.3;
+    }
+    this.group.rotation.x = this.body.quaternion.x * 0.3;
+    this.group.rotation.z = this.body.quaternion.z * 0.3;
+
+    // Roll wheels
+    this.group.children.forEach(c=>{
+      if(c.geometry instanceof THREE.CylinderGeometry) {
+        c.rotation.x += vMs * dt * 0.5;
+      }
+    });
+  }
+
+  triggerCrash(impactVector) {
+    if(this.crashed) return;
+    this.crashed = true;
+    this.braking = false;
+    // Apply explosive impulse
+    const imp = new CANNON.Vec3(
+      (Math.random()-0.5)*this.spec.mass*2 + (impactVector?.x||0),
+      this.spec.mass*0.8 + Math.random()*this.spec.mass,
+      (Math.random()-0.5)*this.spec.mass*2 + (impactVector?.z||0)
+    );
+    this.body.applyImpulse(imp, this.body.position);
+    this.body.applyTorque(new CANNON.Vec3(
+      (Math.random()-0.5)*this.spec.mass*500,
+      (Math.random()-0.5)*this.spec.mass*800,
+      (Math.random()-0.5)*this.spec.mass*500
+    ));
+    this.spinOut = true; this.spinTimer = 3;
+    // Deform body mesh slightly
+    this.bodyMesh.scale.set(1.2, 0.75, 1.1);
+    this.bodyMesh.material = new THREE.MeshLambertMaterial({color:0x2a1500});
+    crashCount++;
+    document.getElementById('hv-crashes').textContent = crashCount;
+  }
+
+  dispose() {
+    SCENE.remove(this.group);
+    PHYSICS_WORLD.removeBody(this.body);
+    this.alive = false;
+  }
+}
+
+// ─── SPAWN FUNCTIONS ──────────────────────────────────────────
+function spawnVehicle(type) {
+  const side = Math.random()>0.5;
+  const dir = side?1:-1;
+  const lane = side?-4:4;
+  const x = (Math.random()-0.5)*60;
+  const v = new PhysicsVehicle(type, {x, y:1, z:lane}, dir);
+  vehicles.push(v);
+  document.getElementById('hv-vcount').textContent = vehicles.length;
+  logMsg(`Spawned ${VEHICLE_SPECS[type].name} at x=${x.toFixed(1)} dir=${dir>0?'+X':'-X'}`, 'info');
+}
+
+function spawnAIVehicle() {
+  const types = ['sedan','sedan','truck','ambulance','bus'];
+  const type = types[Math.floor(Math.random()*types.length)];
+  const dirs = [1,-1,2,-2];
+  const dir = dirs[Math.floor(Math.random()*dirs.length)];
+  let x=0,z=0;
+  if(Math.abs(dir)===1) { x=(Math.random()-0.5)*120; z=dir>0?-4:4; }
+  else { x=dir>0?4:-4; z=(Math.random()-0.5)*120; }
+  const v = new PhysicsVehicle(type, {x, y:1, z}, dir);
+  v.isAI = true;
+  aiVehicles.push(v);
+  vehicles.push(v);
+  document.getElementById('hv-vcount').textContent = vehicles.length;
+}
+
+function dropPothole() {
+  const x=(Math.random()-0.5)*60, z=(Math.random()>0.5?-4:4);
+  const geo = new THREE.CylinderGeometry(0.8,1.1,0.25,10);
+  const mat = new THREE.MeshLambertMaterial({color:0x0a0a0a});
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x,0,z);
+  m.receiveShadow=true;
+  SCENE.add(m);
+  potholes.push({mesh:m});
+  potholeCount++;
+  document.getElementById('hv-ph').textContent = potholeCount;
+  logMsg(`Pothole placed at (${x.toFixed(1)}, ${z.toFixed(1)})`, 'warn');
+}
+
+function dropWaterPuddle() {
+  const x=(Math.random()-0.5)*80, z=(Math.random()-0.5)*14;
+  const geo = new THREE.PlaneGeometry(5,3);
+  const mat = new THREE.MeshLambertMaterial({color:0x0a2a40,transparent:true,opacity:0.75});
+  const m = new THREE.Mesh(geo, mat);
+  m.rotation.x=-Math.PI/2; m.position.set(x,0.03,z);
+  SCENE.add(m);
+  puddles.push(m);
+  logMsg(`Water puddle dropped at (${x.toFixed(1)}, ${z.toFixed(1)}) — hydroplane risk!`, 'warn');
+}
+
+// ─── SCENARIOS ────────────────────────────────────────────────
+function simulateCrash() {
+  const mu = SURFACE_MU[roadSurface];
+  const v = playerSpeed;
+  const vMs = v/3.6;
+  const reactDist = vMs*0.9;
+  const brakeDist = (vMs*vMs)/(2*mu*G);
+  const totalStop = reactDist + brakeDist;
+
+  logMsg(`⚡ CRASH SCENARIO — ${v}km/h on ${SURFACE_NAMES[roadSurface]}`, 'crash');
+  logMsg(`Stop dist needed: ${totalStop.toFixed(1)}m | μ=${mu}`, 'crash');
+
+  // Spawn lead vehicle
+  const lead = new PhysicsVehicle('sedan', {x:-8, y:1, z:-4}, 1);
+  lead.targetSpeed = 20;
+  vehicles.push(lead);
+
+  // Spawn chasing vehicle at speed
+  const chase = new PhysicsVehicle('truck', {x:-30, y:1, z:-4}, 1);
+  chase.speedKmh = v;
+  chase.targetSpeed = v;
+  vehicles.push(chase);
+  document.getElementById('hv-vcount').textContent = vehicles.length;
+
+  logMsg(`Lead Sedan spawned at x=-8 | Chase Truck at x=-30 (${v}km/h)`, 'info');
+
+  // Trigger braking after 1.2s
+  setTimeout(()=>{
+    lead.braking = true;
+    logMsg(`Lead vehicle EMERGENCY BRAKE! Stopping distance: ${totalStop.toFixed(1)}m`, 'warn');
+  }, 1200);
+
+  // Detect collision after 3s
+  setTimeout(()=>{
+    const dist = Math.abs(chase.group.position.x - lead.group.position.x);
+    if(dist < totalStop * 0.9 || v > 50) {
+      logMsg(`💥 COLLISION DETECTED! Separation: ${dist.toFixed(1)}m < ${totalStop.toFixed(1)}m`, 'crash');
+      lead.triggerCrash({x:-5000, z:0});
+      chase.triggerCrash({x:5000, z:2000});
+      // Camera to crash point
+      setCam('cinematic');
+      orbitTarget.set(-8, 2, -4);
+    } else {
+      logMsg(`✓ Near miss — vehicles avoided collision on ${SURFACE_NAMES[roadSurface]}`, 'ok');
+    }
+  }, 3000);
+}
+
+function emergencyBrake() {
+  vehicles.forEach(v=>{ v.braking=true; });
+  const mu = SURFACE_MU[roadSurface];
+  const vMs = playerSpeed/3.6;
+  const dist = (vMs*vMs)/(2*mu*G);
+  logMsg(`🛑 EMERGENCY BRAKE ALL — Required stop: ${dist.toFixed(1)}m | μ=${mu.toFixed(2)}`, 'crash');
+  setTimeout(()=>{ vehicles.forEach(v=>{ if(!v.crashed)v.braking=false; }); }, 4000);
+}
+
+function resetWorld() {
+  vehicles.forEach(v=>v.dispose());
+  vehicles=[]; aiVehicles=[];
+  potholes.forEach(p=>SCENE.remove(p.mesh));
+  potholes=[];
+  puddles.forEach(p=>SCENE.remove(p));
+  puddles=[];
+  crashCount=0; potholeCount=0;
+  document.getElementById('hv-crashes').textContent=0;
+  document.getElementById('hv-ph').textContent=0;
+  document.getElementById('hv-vcount').textContent=0;
+  document.getElementById('log').innerHTML='<span class="li ok">— World reset —</span>';
+  for(let i=0;i<targetAICount;i++) spawnAIVehicle();
+  orbitTarget.set(0,0,0);
+  logMsg('World reset complete.','ok');
+}
+
+// ─── ROAD SURFACE ─────────────────────────────────────────────
+function setRoad(surf) {
+  roadSurface = surf;
+  PHYSICS_WORLD.defaultContactMaterial.friction = SURFACE_MU[surf];
+
+  // Update road button active state
+  ['dry','wet','water','ice'].forEach(s=>{
+    document.getElementById('rb-'+s).classList.toggle('active',s===surf);
+  });
+
+  document.getElementById('hv-surf').textContent = {dry:'Dry',wet:'Wet',water:'Flood',ice:'Ice'}[surf];
+  document.getElementById('hv-mu').textContent = SURFACE_MU[surf].toFixed(2);
+
+  // Rebuild road visuals
+  buildRoadNetwork();
+  updatePhysicsHUD();
+  logMsg(`Road changed → ${SURFACE_NAMES[surf]} μ=${SURFACE_MU[surf]}`, 'info');
+}
+
+// ─── CAMERA MODES ─────────────────────────────────────────────
+function setCam(mode) {
+  camMode=mode;
+  const labels={orbit:'ORBIT VIEW',top:'TOP DOWN',chase:'CHASE CAM',cinematic:'CINEMATIC'};
+  document.getElementById('cam-mode').textContent=labels[mode]||mode.toUpperCase();
+  if(mode==='chase'&&vehicles.length>0) chaseTarget=vehicles[0];
+}
+
+function updateCamera(dt) {
+  if(camMode==='orbit') {
+    const x = orbitTarget.x + orbitRadius*Math.sin(orbitAngH)*Math.cos(orbitAngV);
+    const y = orbitTarget.y + orbitRadius*Math.sin(orbitAngV);
+    const z = orbitTarget.z + orbitRadius*Math.cos(orbitAngH)*Math.cos(orbitAngV);
+    CAMERA.position.lerp(new THREE.Vector3(x,y,z), 0.08);
+    CAMERA.lookAt(orbitTarget);
+  } else if(camMode==='top') {
+    CAMERA.position.lerp(new THREE.Vector3(orbitTarget.x, 90, orbitTarget.z), 0.05);
+    CAMERA.lookAt(orbitTarget);
+  } else if(camMode==='chase'&&chaseTarget&&chaseTarget.alive) {
+    const p = chaseTarget.group.position;
+    const behind = chaseTarget.direction===1?-1:1;
+    const target = new THREE.Vector3(p.x+behind*18, p.y+5, p.z+2);
+    CAMERA.position.lerp(target, 0.1);
+    CAMERA.lookAt(p.x, p.y+1, p.z);
+  } else if(camMode==='cinematic') {
+    cinematicAngle += dt*0.25;
+    const r=40;
+    const cx = orbitTarget.x + r*Math.cos(cinematicAngle);
+    const cz = orbitTarget.z + r*Math.sin(cinematicAngle);
+    CAMERA.position.lerp(new THREE.Vector3(cx,15,cz), 0.04);
+    CAMERA.lookAt(orbitTarget);
+  }
+}
+
+// ─── AI TARGET COUNT ──────────────────────────────────────────
+function setAICount(n) {
+  targetAICount=n;
+  while(aiVehicles.length>n) {
+    const v=aiVehicles.pop();
+    vehicles.splice(vehicles.indexOf(v),1);
+    v.dispose();
+  }
+  while(aiVehicles.length<n) spawnAIVehicle();
+  document.getElementById('hv-vcount').textContent=vehicles.length;
+}
+
+function onSpeedChange(val) {
+  playerSpeed=parseInt(val);
+  document.getElementById('sv-speed').textContent=val;
+  vehicles.forEach(v=>{ if(!v.isAI&&!v.crashed) { v.targetSpeed=playerSpeed; v.speedKmh=playerSpeed; }});
+  updatePhysicsHUD();
+}
+
+// ─── COLLISION DETECTION ──────────────────────────────────────
+function checkCollisions() {
+  for(let i=0;i<vehicles.length;i++) {
+    for(let j=i+1;j<vehicles.length;j++) {
+      const a=vehicles[i], b=vehicles[j];
+      if(!a.alive||!b.alive||a.crashed&&b.crashed) continue;
+      const dx=a.group.position.x-b.group.position.x;
+      const dz=a.group.position.z-b.group.position.z;
+      const dist=Math.sqrt(dx*dx+dz*dz);
+      const minDist=(a.spec.l+b.spec.l)*0.45;
+      if(dist<minDist) {
+        const relSpd=Math.abs(a.speedKmh-b.speedKmh);
+        const mu=SURFACE_MU[roadSurface];
+        const severity=relSpd>40?'HIGH':relSpd>20?'MODERATE':'LOW';
+        if(!a.crashed||!b.crashed) {
+          logMsg(`💥 ${a.spec.name}×${b.spec.name} collision! ΔV=${relSpd.toFixed(0)}km/h Severity:${severity}`, 'crash');
+          a.triggerCrash({x:-dx*500, z:-dz*500});
+          b.triggerCrash({x:dx*500, z:dz*500});
+          orbitTarget.lerp(new THREE.Vector3(
+            (a.group.position.x+b.group.position.x)/2,
+            2,
+            (a.group.position.z+b.group.position.z)/2
+          ), 0.3);
+        }
+      }
+    }
+  }
+}
+
+// ─── PHYSICS HUD ──────────────────────────────────────────────
+function updatePhysicsHUD() {
+  const mu=SURFACE_MU[roadSurface];
+  const v=playerSpeed;
+  const vMs=v/3.6;
+  const sight=parseInt(document.getElementById('sl-sight').value);
+  const reactDist=vMs*0.9;
+  const brakeDist=(vMs*vMs)/(2*mu*G);
+  const totalStop=reactDist+brakeDist;
+  const safeV=Math.sqrt(2*mu*G*sight)*3.6;
+  const prob=Math.min(100, Math.round((totalStop/(sight+1))*100));
+
+  document.getElementById('hv-stop').textContent=totalStop.toFixed(0)+'m';
+  document.getElementById('hv-mu').textContent=mu.toFixed(2);
+
+  const riskEl=document.getElementById('hv-risk');
+  riskEl.className='val';
+  if(prob<25){ riskEl.textContent='LOW'; riskEl.classList.add('risk-low'); }
+  else if(prob<55){ riskEl.textContent='MED'; riskEl.classList.add('risk-med'); }
+  else if(prob<80){ riskEl.textContent='HIGH'; riskEl.classList.add('risk-high'); }
+  else { riskEl.textContent='CRIT'; riskEl.classList.add('risk-crit'); }
+
+  document.getElementById('phys-panel').innerHTML=`
+    <b>Speed:</b> ${v} km/h (${vMs.toFixed(1)} m/s)<br>
+    <b>Friction μ:</b> ${mu.toFixed(2)}<br>
+    <b>Reaction dist:</b> ${reactDist.toFixed(1)} m<br>
+    <b>Brake dist:</b> ${brakeDist.toFixed(1)} m<br>
+    <b>Total stop:</b> ${totalStop.toFixed(1)} m<br>
+    <b>Sight dist:</b> ${sight} m<br>
+    <b>Safe speed:</b> ${safeV.toFixed(0)} km/h<br>
+    <b>Accident prob:</b> <span style="color:${prob>60?'#f87171':prob>35?'#fbbf24':'#4ade80'}">${prob}%</span>
+  `;
+}
+
+// ─── SPEEDOMETER ──────────────────────────────────────────────
+function drawSpeedometer(speed) {
+  const cv=document.getElementById('speedo-canvas');
+  const ctx=cv.getContext('2d');
+  const cx=60, cy=65, r=48;
+  ctx.clearRect(0,0,120,120);
+
+  // Arc track
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,-Math.PI*0.9,Math.PI*0.1);
+  ctx.strokeStyle='rgba(255,255,255,0.1)';
+  ctx.lineWidth=5; ctx.stroke();
+
+  // Speed arc
+  const frac=Math.min(speed/140,1);
+  const startA=-Math.PI*0.9, endA=startA+Math.PI*frac*1.0;
+  const col=speed>100?'#f87171':speed>60?'#fbbf24':'#4ade80';
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,startA,endA);
+  ctx.strokeStyle=col; ctx.lineWidth=5; ctx.stroke();
+
+  // Speed text
+  ctx.fillStyle='#fff'; ctx.font='bold 20px Inter,sans-serif';
+  ctx.textAlign='center'; ctx.fillText(Math.round(speed),cx,cy+6);
+  ctx.font='9px Inter,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.4)';
+  ctx.fillText('km/h',cx,cy+18);
+}
+
+// ─── INCIDENT LOG ─────────────────────────────────────────────
+function logMsg(msg, type='info') {
+  const log=document.getElementById('log');
+  const el=document.createElement('span');
+  el.className=`li ${type}`;
+  const now=new Date();
+  el.textContent=`[${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}] ${msg}`;
+  log.insertBefore(el, log.firstChild);
+  while(log.children.length>50) log.removeChild(log.lastChild);
+}
+
+// ─── MAIN LOOP ────────────────────────────────────────────────
+let lastPhysTime=0;
+function loop(time) {
+  requestAnimationFrame(loop);
+  delta = clock.getDelta();
+  if(delta>0.05) delta=0.05;
+
+  // FPS counter
+  frameCount++;
+  if(time-lastFPSTime>1000) {
+    document.getElementById('sp-fps').textContent=frameCount;
+    frameCount=0; lastFPSTime=time;
+  }
+
+  // Physics step
+  const pt=performance.now();
+  PHYSICS_WORLD.step(1/60, delta, 3);
+  lastPhysTime=performance.now()-pt;
+  document.getElementById('sp-phys').textContent=lastPhysTime.toFixed(1)+'ms';
+  document.getElementById('sp-bodies').textContent=PHYSICS_WORLD.bodies.length;
+
+  // Update vehicles
+  vehicles.forEach(v=>v.update(delta));
+
+  // Collision detection
+  checkCollisions();
+
+  // Camera
+  updateCamera(delta);
+
+  // HUD
+  const dispVeh = vehicles.find(v=>!v.crashed&&v.alive);
+  if(dispVeh) {
+    document.getElementById('hv-spd').textContent=Math.round(dispVeh.speedKmh);
+    drawSpeedometer(dispVeh.speedKmh);
+  } else {
+    document.getElementById('hv-spd').textContent=0;
+    drawSpeedometer(0);
+  }
+
+  RENDERER.render(SCENE, CAMERA);
+}
+
+// Start!
+init();
+</script>
+</body>
+</html>

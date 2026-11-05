@@ -84,6 +84,16 @@ async def serve_index():
         return f.read()
 
 
+@app.get("/simulator", response_class=HTMLResponse)
+async def serve_simulator():
+    """Serve the full 3D physics simulation world (Three.js + Cannon-es)."""
+    sim_file = PROJECT_ROOT / "web" / "sim_world.html"
+    if not sim_file.exists():
+        raise HTTPException(status_code=404, detail="sim_world.html not found.")
+    with open(sim_file, "r", encoding="utf-8") as f:
+        return f.read()
+
+
 @app.post("/api/analyze-image")
 async def analyze_image(
     file: UploadFile = File(...),
