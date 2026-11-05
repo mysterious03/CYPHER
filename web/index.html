@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CYPhER | Road Perception & Hazard Intelligence</title>
+  <title>CYPhER | Road Perception, Hazard Intelligence & 3D Physics Simulator</title>
+  
+  <!-- Three.js & OrbitControls for 3D Road Physics Simulation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
   <style>
     :root {
       --bg: #09090b;
@@ -124,6 +129,11 @@
       width: 100%;
     }
 
+    /* Full width layout for simulation tab */
+    .sim-mode main {
+      grid-template-columns: 1.35fr 0.85fr;
+    }
+
     @media (max-width: 1024px) {
       main { grid-template-columns: 1fr; }
     }
@@ -230,6 +240,16 @@
       color: var(--text);
     }
     .btn-secondary:hover { background: #27272a; }
+    .btn-danger {
+      background: #dc2626;
+      color: #fff;
+    }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-warning {
+      background: #d97706;
+      color: #fff;
+    }
+    .btn-warning:hover { background: #b45309; }
 
     /* Media Viewer */
     .viewer-container {
@@ -266,6 +286,37 @@
       font-size: 0.75rem;
       color: #fff;
       letter-spacing: 0.02em;
+    }
+
+    /* 3D Simulation Canvas Container */
+    #simCanvasContainer {
+      width: 100%;
+      height: 540px;
+      position: relative;
+      background: #050508;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    #simCanvasContainer canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+    .sim-overlay-hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(18, 18, 22, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      color: #fff;
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
     }
 
     /* Scorecard Grid */
@@ -355,6 +406,51 @@
     .tag-crack { border-color: rgba(245, 158, 11, 0.4); color: #fde68a; }
     .tag-vehicle { border-color: rgba(59, 130, 246, 0.4); color: #93c5fd; }
 
+    /* Simulation Control Dock */
+    .sim-control-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .sim-slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sim-slider-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .sim-slider-label span { color: #fff; font-weight: 600; }
+    .sim-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #27272a;
+      outline: none;
+      accent-color: var(--accent);
+    }
+    .sim-log-box {
+      background: #0d0d10;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: #d4d4d8;
+      max-height: 160px;
+      overflow-y: auto;
+      line-height: 1.4;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .log-warn { color: #fbbf24; }
+    .log-crash { color: #f87171; font-weight: bold; }
+    .log-info { color: #60a5fa; }
+
     /* Spinner */
     .loader {
       display: inline-block;
@@ -382,7 +478,7 @@
   <header>
     <div class="brand">
       <span class="brand-title">CYPhER</span>
-      <span class="brand-sub">Road Perception & Hazard Intelligence</span>
+      <span class="brand-sub">Road Perception, Hazard Intelligence & 3D Physics Simulator</span>
     </div>
     <div class="header-right">
       <div class="pill">
@@ -400,11 +496,12 @@
     <button class="tab-btn active" onclick="switchTab('photo')">Photo Analysis</button>
     <button class="tab-btn" onclick="switchTab('video')">Video Analysis</button>
     <button class="tab-btn" onclick="switchTab('live')">Live Camera Stream</button>
+    <button class="tab-btn" onclick="switchTab('sim')">3D Physics Simulator & Crash World</button>
   </div>
 
   <!-- Main Content Layout -->
-  <main>
-    <!-- Left Column: Input and Visual Viewer -->
+  <main id="mainContainer">
+    <!-- Left Column: Input and Visual Viewer / 3D Canvas -->
     <section class="panel">
       <div class="panel-header">
         <span class="panel-title" id="viewerTitle">Input & Perception Viewer</span>
@@ -475,7 +572,7 @@
           </div>
         </div>
 
-        <!-- Media Display Canvas / Image Viewer -->
+        <!-- Media Display Canvas / Image Viewer (For Photo, Video & Live) -->
         <div class="viewer-container" id="viewerBox">
           <div class="viewer-empty" id="viewerEmpty">
             No media loaded.<br>Drop an image or start a stream above to begin perception.
@@ -484,88 +581,201 @@
           <div id="viewerBadge" class="viewer-badge" style="display: none;">ANNOTATED HUD</div>
         </div>
 
-      </div>
-    </section>
-
-    <!-- Right Column: Safety Scorecard & Hazard Intelligence -->
-    <section class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Safety Telemetry & Scoring</span>
-        <span id="analysisStatus" style="font-size: 0.75rem; color: var(--text-dim);">Standby</span>
-      </div>
-      <div class="panel-body">
-        
-        <!-- Scorecard Metrics -->
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <span class="metric-label">Overall Safety Risk</span>
-            <div id="riskScoreBadge" class="risk-badge risk-low">LOW RISK</div>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Fusion Confidence</span>
-            <span class="metric-value" id="metricConfidence">--</span>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Pipeline Latency</span>
-            <span class="metric-value" id="metricLatency">--</span>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Active Hazards</span>
-            <span class="metric-value" id="metricHazardsCount">0</span>
-          </div>
-        </div>
-
-        <!-- Detected Hazards Section -->
-        <div>
-          <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-bottom: 8px;">
-            Identified Road Hazards
-          </div>
-          <div class="hazards-container" id="hazardsList">
-            <div style="font-size: 0.82rem; color: var(--text-dim); padding: 8px 0;">
-              No hazards detected yet. Load media to evaluate road conditions.
+        <!-- Tab 4: 3D Interactive Three.js Simulator Viewport -->
+        <div id="tabSimViewport" style="display: none;">
+          <div id="simCanvasContainer">
+            <div class="sim-overlay-hud">
+              <div><strong>3D ROAD PHYSICS SIMULATOR</strong></div>
+              <div>Mouse: Left Click (Rotate) | Right Click (Pan) | Scroll (Zoom)</div>
+              <div id="simFps">60 FPS &bull; Physics Step 16ms</div>
             </div>
           </div>
         </div>
 
-        <!-- Detection Summary Tags -->
-        <div>
-          <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-bottom: 8px;">
-            Target Detections Breakdown
+      </div>
+    </section>
+
+    <!-- Right Column: Safety Scorecard & Hazard Intelligence / Simulator Controls -->
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title" id="rightPanelTitle">Safety Telemetry & Scoring</span>
+        <span id="analysisStatus" style="font-size: 0.75rem; color: var(--text-dim);">Standby</span>
+      </div>
+      <div class="panel-body">
+        
+        <!-- Standard Perception Telemetry Panel (Photo, Video, Live) -->
+        <div id="standardTelemetryPanel">
+          <!-- Scorecard Metrics -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-label">Overall Safety Risk</span>
+              <div id="riskScoreBadge" class="risk-badge risk-low">LOW RISK</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Fusion Confidence</span>
+              <span class="metric-value" id="metricConfidence">--</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Pipeline Latency</span>
+              <span class="metric-value" id="metricLatency">--</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Active Hazards</span>
+              <span class="metric-value" id="metricHazardsCount">0</span>
+            </div>
           </div>
-          <div class="tags-cloud" id="detectionsList">
-            <span class="tag-item">Potholes: 0</span>
-            <span class="tag-item">Cracks: 0</span>
-            <span class="tag-item">Vehicles: 0</span>
-            <span class="tag-item">Water: Dry</span>
+
+          <!-- Detected Hazards Section -->
+          <div style="margin-top: 14px;">
+            <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-bottom: 8px;">
+              Identified Road Hazards
+            </div>
+            <div class="hazards-container" id="hazardsList">
+              <div style="font-size: 0.82rem; color: var(--text-dim); padding: 8px 0;">
+                No hazards detected yet. Load media to evaluate road conditions.
+              </div>
+            </div>
           </div>
+
+          <!-- Detection Summary Tags -->
+          <div style="margin-top: 14px;">
+            <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-bottom: 8px;">
+              Target Detections Breakdown
+            </div>
+            <div class="tags-cloud" id="detectionsList">
+              <span class="tag-item">Potholes: 0</span>
+              <span class="tag-item">Cracks: 0</span>
+              <span class="tag-item">Vehicles: 0</span>
+              <span class="tag-item">Water: Dry</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3D Simulator Interactive Control Dock (Active in Sim Mode) -->
+        <div id="simulatorControlsPanel" style="display: none;" class="sim-control-panel">
+          
+          <!-- Physics Advisory Readout -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-label">Safe Advisory Speed</span>
+              <span class="metric-value" id="simSafeSpeed" style="color: #10b981;">65 km/h</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Road Grip (Friction &mu;)</span>
+              <span class="metric-value" id="simFriction">0.85 (Dry)</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Stopping Distance</span>
+              <span class="metric-value" id="simStopDist">28.4 m</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Accident Probability</span>
+              <span class="metric-value" id="simAccidentRisk" style="color: #10b981;">12% (Nominal)</span>
+            </div>
+          </div>
+
+          <!-- Road Condition Selector -->
+          <div class="sim-slider-row">
+            <label class="sim-slider-label">Road Condition Surface: <span id="lblCond">Dry Asphalt (&mu;=0.85)</span></label>
+            <select id="simRoadCondition" class="select-input" onchange="onRoadConditionChange(this.value)">
+              <option value="dry">Dry Asphalt (High Grip &mu;=0.85)</option>
+              <option value="wet">Wet Pavement (Reduced Grip &mu;=0.50)</option>
+              <option value="waterlogged">Waterlogged / Puddles (Hydroplaning &mu;=0.22)</option>
+              <option value="potholes">Potholed Road (Suspension Jolt / Rim Deflection)</option>
+              <option value="icy">Icy / Extreme Slip (&mu;=0.12)</option>
+            </select>
+          </div>
+
+          <!-- Vehicle Speed Slider -->
+          <div class="sim-slider-row">
+            <div class="sim-slider-label">
+              <span>Vehicle Speed:</span>
+              <span id="lblSpeed">60 km/h</span>
+            </div>
+            <input type="range" id="simSpeedSlider" class="sim-slider" min="20" max="140" value="60" oninput="onSpeedSliderChange(this.value)">
+          </div>
+
+          <!-- Vehicle & Entity Spawners -->
+          <div>
+            <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px;">
+              Entity Spawning
+            </div>
+            <div class="controls-row">
+              <button class="btn btn-secondary" onclick="simSpawnVehicle('car')">+ Spawn Car</button>
+              <button class="btn btn-secondary" onclick="simSpawnVehicle('truck')">+ Spawn Truck</button>
+              <button class="btn btn-secondary" onclick="simSpawnVehicle('ambulance')">+ Spawn Ambulance</button>
+              <button class="btn btn-secondary" onclick="simSpawnPothole()">+ Place Pothole</button>
+            </div>
+          </div>
+
+          <!-- Physics & Collision Simulation Scenarios -->
+          <div>
+            <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px;">
+              Physics & Accident Scenarios
+            </div>
+            <div class="controls-row">
+              <button class="btn btn-warning" onclick="simTriggerBraking()">Emergency Brake Test</button>
+              <button class="btn btn-danger" onclick="simTriggerCrashScenario()">Simulate Crash Scenario</button>
+              <button class="btn btn-secondary" onclick="simResetWorld()">Reset World</button>
+            </div>
+          </div>
+
+          <!-- Crash Log & Diagnostic Telemetry -->
+          <div>
+            <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px;">
+              Accident Diagnostics & Physics Log
+            </div>
+            <div class="sim-log-box" id="simLogBox">
+              <div class="log-info">[SIMULATOR INITIALIZED] 3D physics environment ready.</div>
+              <div>&bull; Road length: 240m | 4-Lane Dual Carriageway</div>
+              <div>&bull; Calculated braking sight distance: 45m</div>
+            </div>
+          </div>
+
         </div>
 
       </div>
     </section>
   </main>
 
-  <!-- Frontend Logic -->
+  <!-- Frontend Scripts & Three.js Simulation Engine -->
   <script>
     let currentOriginalUrl = null;
     let currentOverlayUrl = null;
     let isStreaming = false;
     let streamTimer = null;
+    let simInitialized = false;
 
     // Tab Switching
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       event.target.classList.add('active');
 
+      const isSim = tab === 'sim';
+      document.body.classList.toggle('sim-mode', isSim);
+
       document.getElementById('tabPhoto').style.display = tab === 'photo' ? 'block' : 'none';
       document.getElementById('tabVideo').style.display = tab === 'video' ? 'block' : 'none';
       document.getElementById('tabLive').style.display = tab === 'live' ? 'block' : 'none';
 
+      document.getElementById('viewerBox').style.display = isSim ? 'none' : 'flex';
+      document.getElementById('tabSimViewport').style.display = isSim ? 'block' : 'none';
+      document.getElementById('standardTelemetryPanel').style.display = isSim ? 'none' : 'block';
+      document.getElementById('simulatorControlsPanel').style.display = isSim ? 'flex' : 'none';
+
+      document.getElementById('viewerTitle').textContent = isSim ? '3D Road Physics Simulation World' : 'Input & Perception Viewer';
+      document.getElementById('rightPanelTitle').textContent = isSim ? 'Simulation Controls & Crash Diagnostics' : 'Safety Telemetry & Scoring';
+
       if (tab !== 'live' && isStreaming) {
         stopStream();
       }
+
+      if (isSim && !simInitialized) {
+        init3DSimulator();
+      }
     }
 
-    // Drag and drop setup
+    // Drag & Drop Photo Handling
     const photoZone = document.getElementById('photoDropZone');
     ['dragenter', 'dragover'].forEach(name => {
       photoZone.addEventListener(name, (e) => { e.preventDefault(); photoZone.classList.add('dragover'); });
@@ -576,19 +786,6 @@
     photoZone.addEventListener('drop', (e) => {
       if (e.dataTransfer.files && e.dataTransfer.files[0]) {
         handlePhotoUpload(e.dataTransfer.files[0]);
-      }
-    });
-
-    const videoZone = document.getElementById('videoDropZone');
-    ['dragenter', 'dragover'].forEach(name => {
-      videoZone.addEventListener(name, (e) => { e.preventDefault(); videoZone.classList.add('dragover'); });
-    });
-    ['dragleave', 'drop'].forEach(name => {
-      videoZone.addEventListener(name, (e) => { e.preventDefault(); videoZone.classList.remove('dragover'); });
-    });
-    videoZone.addEventListener('drop', (e) => {
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        handleVideoUpload(e.dataTransfer.files[0]);
       }
     });
 
@@ -604,16 +801,12 @@
       formData.append('mode', mode);
 
       try {
-        const res = await fetch('/api/analyze-image', {
-          method: 'POST',
-          body: formData
-        });
+        const res = await fetch('/api/analyze-image', { method: 'POST', body: formData });
         const data = await res.json();
         renderResults(data);
         statusEl.textContent = 'Completed';
       } catch (err) {
         statusEl.textContent = 'Inference Error';
-        console.error(err);
       }
     }
 
@@ -645,10 +838,7 @@
       formData.append('mode', mode);
 
       try {
-        const res = await fetch('/api/analyze-video', {
-          method: 'POST',
-          body: formData
-        });
+        const res = await fetch('/api/analyze-video', { method: 'POST', body: formData });
         const data = await res.json();
         renderResults(data);
         statusEl.textContent = 'Video Analysis Completed';
@@ -659,12 +849,7 @@
 
     // Live Streaming
     function toggleStream() {
-      const btn = document.getElementById('btnStreamToggle');
-      if (isStreaming) {
-        stopStream();
-      } else {
-        startStream();
-      }
+      if (isStreaming) { stopStream(); } else { startStream(); }
     }
 
     function startStream() {
@@ -682,11 +867,9 @@
       btn.textContent = 'Stop Stream';
       btn.style.background = '#dc2626';
 
-      // Attach stream URL to MJPEG endpoint
       viewerImg.src = `/api/stream?source=${source}&mode=${mode}&t=${Date.now()}`;
       isStreaming = true;
 
-      // Poll telemetry every 600ms
       streamTimer = setInterval(async () => {
         try {
           const res = await fetch('/api/stream-telemetry');
@@ -715,7 +898,6 @@
     // Render Inferred Results
     function renderResults(data) {
       if (!data) return;
-
       const viewerImg = document.getElementById('viewerImg');
       const emptyBox = document.getElementById('viewerEmpty');
       const badge = document.getElementById('viewerBadge');
@@ -733,7 +915,6 @@
         viewerImg.src = currentOverlayUrl;
         badge.textContent = 'ANNOTATED HUD OVERLAY';
       }
-
       updateTelemetryDisplay(data);
     }
 
@@ -749,22 +930,19 @@
       }
     }
 
-    // Update Scorecard & Tags
     function updateTelemetryDisplay(data) {
       const fusion = data.fusion || {};
       const perf = data.performance || {};
       const caps = data.capabilities || {};
 
-      // Risk Badge
       const risk = fusion.overall_road_safety_risk || 'LOW_RISK';
       const riskBadge = document.getElementById('riskScoreBadge');
-      riskBadge.textContent = risk.replace('_', ' ');
+      riskBadge.textContent = risk.replace(/_/g, ' ');
       riskBadge.className = 'risk-badge ' + (
         risk.includes('SEVERE') || risk.includes('CRITICAL') ? 'risk-sev' :
         (risk.includes('MODERATE') || risk.includes('ELEVATED') ? 'risk-mod' : 'risk-low')
       );
 
-      // Confidence & Performance
       const conf = fusion.fusion_confidence ? Math.round(fusion.fusion_confidence * 100) : '--';
       document.getElementById('metricConfidence').textContent = conf !== '--' ? `${conf}%` : '--';
 
@@ -772,10 +950,8 @@
       const fps = perf.fps ? ` (${perf.fps} FPS)` : '';
       document.getElementById('metricLatency').textContent = `${latency}${fps}`;
 
-      const hazardsCount = fusion.detected_hazards_count || 0;
-      document.getElementById('metricHazardsCount').textContent = hazardsCount;
+      document.getElementById('metricHazardsCount').textContent = fusion.detected_hazards_count || 0;
 
-      // Hazards Cards
       const hazardsContainer = document.getElementById('hazardsList');
       hazardsContainer.innerHTML = '';
       const hazards = fusion.hazards || [];
@@ -797,37 +973,531 @@
         });
       }
 
-      // Detection Tags Breakdown
       const tagsContainer = document.getElementById('detectionsList');
       tagsContainer.innerHTML = '';
-
-      // Count damage
       const damagePreds = caps.damage?.predictions || [];
       const potholes = damagePreds.filter(d => (d.class_name || '').toLowerCase().includes('pothole')).length;
       const cracks = damagePreds.filter(d => (d.class_name || '').toLowerCase().includes('crack')).length;
       if (potholes > 0) tagsContainer.innerHTML += `<span class="tag-item tag-pothole">Potholes: ${potholes}</span>`;
       if (cracks > 0) tagsContainer.innerHTML += `<span class="tag-item tag-crack">Cracks: ${cracks}</span>`;
 
-      // Vehicles count
       const vehicles = caps.vehicles?.predictions || [];
-      if (vehicles.length > 0) {
-        tagsContainer.innerHTML += `<span class="tag-item tag-vehicle">Vehicles: ${vehicles.length}</span>`;
-      }
+      if (vehicles.length > 0) tagsContainer.innerHTML += `<span class="tag-item tag-vehicle">Vehicles: ${vehicles.length}</span>`;
 
-      // Surface
       const surf = caps.surface?.predictions || {};
-      if (surf.material) {
-        tagsContainer.innerHTML += `<span class="tag-item">Material: ${surf.material}</span>`;
-      }
+      if (surf.material) tagsContainer.innerHTML += `<span class="tag-item">Material: ${surf.material}</span>`;
 
-      // Water
       const water = caps.water?.predictions || {};
       if (water.standing_water_present || (water.pct_road_submerged || 0) > 0) {
         tagsContainer.innerHTML += `<span class="tag-item" style="border-color: rgba(6, 182, 212, 0.4); color: #a5f3fc;">Waterlogged: ${water.pct_road_submerged || 0}%</span>`;
       }
-
       if (tagsContainer.children.length === 0) {
         tagsContainer.innerHTML = '<span class="tag-item">Nominal Scan (Clean Road)</span>';
+      }
+    }
+
+
+    /* =========================================================================
+       3D ROAD PHYSICS SIMULATOR & ACCIDENT WORLD (THREE.JS INTEGRATION)
+       ========================================================================= */
+    let simScene, simCamera, simRenderer, simControls;
+    let simVehicles = [];
+    let simPotholes = [];
+    let simObstacles = [];
+    let simParticles = [];
+    let simRoadMesh;
+    let simCondition = 'dry';
+    let simSpeedKmh = 60;
+    let simClock;
+
+    const FRICTION_MAP = {
+      dry: 0.85,
+      wet: 0.50,
+      waterlogged: 0.22,
+      potholes: 0.65,
+      icy: 0.12
+    };
+
+    function init3DSimulator() {
+      const container = document.getElementById('simCanvasContainer');
+      simClock = new THREE.Clock();
+
+      // 1. Scene & Camera
+      simScene = new THREE.Scene();
+      simScene.background = new THREE.Color(0x07070b);
+      simScene.fog = new THREE.FogExp2(0x07070b, 0.005);
+
+      const w = container.clientWidth || 800;
+      const h = container.clientHeight || 540;
+      simCamera = new THREE.PerspectiveCamera(45, w / h, 0.5, 500);
+      simCamera.position.set(0, 32, 55);
+
+      // 2. Renderer
+      simRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      simRenderer.setSize(w, h);
+      simRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      simRenderer.shadowMap.enabled = true;
+      simRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(simRenderer.domElement);
+
+      // 3. Orbit Controls
+      simControls = new THREE.OrbitControls(simCamera, simRenderer.domElement);
+      simControls.enableDamping = true;
+      simControls.dampingFactor = 0.05;
+      simControls.maxPolarAngle = Math.PI / 2 - 0.02; // Don't go below ground
+      simControls.target.set(0, 0, 0);
+
+      // 4. Lighting
+      const ambient = new THREE.AmbientLight(0xffffff, 0.45);
+      simScene.add(ambient);
+
+      const sun = new THREE.DirectionalLight(0xfffaed, 0.9);
+      sun.position.set(40, 60, 40);
+      sun.castShadow = true;
+      sun.shadow.mapSize.width = 1024;
+      sun.shadow.mapSize.height = 1024;
+      sun.shadow.camera.near = 10;
+      sun.shadow.camera.far = 160;
+      const d = 50;
+      sun.shadow.camera.left = -d;
+      sun.shadow.camera.right = d;
+      sun.shadow.camera.top = d;
+      sun.shadow.camera.bottom = -d;
+      simScene.add(sun);
+
+      // 5. Build Road Environment
+      buildSimRoad();
+
+      // Spawn initial ambient traffic
+      simSpawnVehicle('car', -4.5, -40);
+      simSpawnVehicle('car', 4.5, -15);
+      simSpawnVehicle('truck', -4.5, 20);
+
+      // Initial physics recalculation
+      recalcPhysicsAdvisory();
+
+      // Window Resize Listener
+      window.addEventListener('resize', () => {
+        if (!container) return;
+        const nw = container.clientWidth;
+        const nh = container.clientHeight;
+        if (simCamera && simRenderer && nw && nh) {
+          simCamera.aspect = nw / nh;
+          simCamera.updateProjectionMatrix();
+          simRenderer.setSize(nw, nh);
+        }
+      });
+
+      simInitialized = true;
+      animateSimulator();
+    }
+
+    function buildSimRoad() {
+      // Main Road Pavement (Width 24m, Length 300m)
+      const roadGeo = new THREE.PlaneGeometry(24, 300);
+      const roadMat = new THREE.MeshStandardMaterial({
+        color: 0x1f1f23,
+        roughness: 0.85,
+        metalness: 0.1
+      });
+      simRoadMesh = new THREE.Mesh(roadGeo, roadMat);
+      simRoadMesh.rotation.x = -Math.PI / 2;
+      simRoadMesh.receiveShadow = true;
+      simScene.add(simRoadMesh);
+
+      // Grass / Dirt Shoulders
+      const groundGeo = new THREE.PlaneGeometry(200, 300);
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x0f1712, roughness: 1.0 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.position.y = -0.05;
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      simScene.add(ground);
+
+      // Road Striping Lines
+      // Yellow Center Barrier Double Line
+      createStripe(0.2, 300, 0xffb703, -0.25, 0.02);
+      createStripe(0.2, 300, 0xffb703, 0.25, 0.02);
+
+      // White Lane Divider Dashes
+      for (let z = -140; z <= 140; z += 10) {
+        createStripe(0.2, 4, 0xffffff, -5.5, 0.02, z);
+        createStripe(0.2, 4, 0xffffff, 5.5, 0.02, z);
+      }
+
+      // White Outer Shoulder Solid Lines
+      createStripe(0.3, 300, 0xffffff, -11, 0.02);
+      createStripe(0.3, 300, 0xffffff, 11, 0.02);
+    }
+
+    function createStripe(w, l, color, x, y, z = 0) {
+      const geo = new THREE.PlaneGeometry(w, l);
+      const mat = new THREE.MeshBasicMaterial({ color: color });
+      const m = new THREE.Mesh(geo, mat);
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x, y, z);
+      simScene.add(m);
+    }
+
+    // Vehicle Object Model
+    class SimVehicle {
+      constructor(type, x, z) {
+        this.type = type;
+        this.mesh = this.buildMesh(type);
+        this.mesh.position.set(x, 0, z);
+        simScene.add(this.mesh);
+
+        this.x = x;
+        this.z = z;
+        this.laneX = x;
+        this.speedKmh = simSpeedKmh + (Math.random() * 6 - 3);
+        this.isBraking = false;
+        this.isCrashed = false;
+        this.isSpinning = false;
+        this.yaw = (x > 0) ? Math.PI : 0; // Opposite traffic lanes
+        this.mesh.rotation.y = this.yaw;
+        this.skidMarkTimer = 0;
+      }
+
+      buildMesh(type) {
+        const group = new THREE.Group();
+        let color = 0x2563eb;
+        let w = 2.0, l = 4.4, h = 1.3;
+
+        if (type === 'ambulance') {
+          color = 0xffffff;
+          w = 2.2; l = 5.2; h = 1.8;
+        } else if (type === 'truck') {
+          color = 0xd97706;
+          w = 2.6; l = 8.5; h = 2.4;
+        } else {
+          const colors = [0x2563eb, 0xdc2626, 0x10b981, 0x9333ea, 0xf4f4f5];
+          color = colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        // Lower Chassis
+        const chassisMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(w, 0.6, l), chassisMat);
+        chassis.position.y = 0.5;
+        chassis.castShadow = true;
+        group.add(chassis);
+
+        // Cabin
+        const cabinMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(w * 0.85, h * 0.65, l * 0.55), cabinMat);
+        cabin.position.set(0, 0.5 + h * 0.35, -l * 0.05);
+        cabin.castShadow = true;
+        group.add(cabin);
+
+        // Windshields
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1 });
+        const windshield = new THREE.Mesh(new THREE.BoxGeometry(w * 0.82, h * 0.45, 0.05), glassMat);
+        windshield.position.set(0, 0.5 + h * 0.35, l * 0.22);
+        group.add(windshield);
+
+        // Headlights
+        const lightMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+        const hl1 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.1), lightMat);
+        hl1.position.set(-w * 0.35, 0.5, l * 0.5);
+        const hl2 = hl1.clone();
+        hl2.position.x = w * 0.35;
+        group.add(hl1);
+        group.add(hl2);
+
+        // Taillights
+        const tailMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+        const tl1 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.1), tailMat);
+        tl1.position.set(-w * 0.35, 0.5, -l * 0.5);
+        const tl2 = tl1.clone();
+        tl2.position.x = w * 0.35;
+        group.add(tl1);
+        group.add(tl2);
+
+        // Ambulance Siren Lights
+        if (type === 'ambulance') {
+          const sirenMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+          const siren = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.3), sirenMat);
+          siren.position.set(0, 0.5 + h * 0.72, 0);
+          group.add(siren);
+        }
+
+        // Wheels
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.9 });
+        const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.28, 12);
+        const offsets = [
+          [-w * 0.5, 0.35, l * 0.3],
+          [w * 0.5, 0.35, l * 0.3],
+          [-w * 0.5, 0.35, -l * 0.3],
+          [w * 0.5, 0.35, -l * 0.3]
+        ];
+        offsets.forEach(pos => {
+          const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+          wheel.rotation.z = Math.PI / 2;
+          wheel.position.set(...pos);
+          group.add(wheel);
+        });
+
+        this.length = l;
+        this.width = w;
+        return group;
+      }
+
+      update(dt) {
+        if (this.isCrashed) {
+          // Debris smoke or settling
+          return;
+        }
+
+        const speedMs = (this.speedKmh * 1000) / 3600;
+        const friction = FRICTION_MAP[simCondition] || 0.85;
+
+        // Apply Braking Deceleration if engaged: a = mu * g
+        if (this.isBraking) {
+          const decel = friction * 9.81 * 1.5; // m/s^2
+          this.speedKmh = Math.max(0, this.speedKmh - (decel * 3.6 * dt));
+
+          // Skidding lateral instability on low grip
+          if (friction < 0.4 && this.speedKmh > 20) {
+            this.mesh.rotation.y += (Math.random() - 0.5) * 0.08;
+            this.mesh.position.x += (Math.random() - 0.5) * 0.25;
+          }
+        }
+
+        // Move forward along heading
+        const dir = (this.yaw === 0) ? 1 : -1;
+        this.mesh.position.z += dir * speedMs * dt;
+        this.z = this.mesh.position.z;
+        this.x = this.mesh.position.x;
+
+        // Pothole Impact Check
+        simPotholes.forEach(p => {
+          const dist = Math.hypot(this.x - p.x, this.z - p.z);
+          if (dist < 2.0 && !p.hit) {
+            p.hit = true;
+            this.triggerPotholeHit();
+          }
+        });
+
+        // Loop road boundary
+        if (this.z > 140) this.mesh.position.z = -140;
+        if (this.z < -140) this.mesh.position.z = 140;
+      }
+
+      triggerPotholeHit() {
+        const speed = this.speedKmh;
+        // Bump animation
+        this.mesh.position.y += 0.45;
+        setTimeout(() => { if (this.mesh) this.mesh.position.y = 0; }, 120);
+
+        if (speed < 40) {
+          logSim("Pothole impact at " + Math.round(speed) + " km/h: Minor suspension bump. Safe vehicle control maintained.", "warn");
+        } else if (speed <= 75) {
+          logSim("Pothole impact at " + Math.round(speed) + " km/h: Severe suspension jolt. Steering drift detected.", "warn");
+          this.mesh.position.x += (Math.random() > 0.5 ? 0.8 : -0.8);
+        } else {
+          // Critical wheel rim damage & swerve crash
+          logSim("CRITICAL: Pothole struck at " + Math.round(speed) + " km/h! Suspension failure / rim blowout triggered loss of control!", "crash");
+          this.speedKmh *= 0.4;
+          this.mesh.rotation.y += 0.8;
+          this.isBraking = true;
+        }
+      }
+    }
+
+    // Pothole 3D Crater
+    function simSpawnPothole(x = -4.5, z = 0) {
+      const geo = new THREE.CylinderGeometry(1.4, 1.1, 0.15, 12);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x050508, roughness: 1.0 });
+      const pothole = new THREE.Mesh(geo, mat);
+      pothole.position.set(x, 0.05, z);
+      simScene.add(pothole);
+      simPotholes.push({ mesh: pothole, x: x, z: z, hit: false });
+      logSim("Spawned structural pothole at lane position (X: " + x + ", Z: " + z + ").", "info");
+    }
+
+    // Vehicle Spawning
+    function simSpawnVehicle(type = 'car', customX = null, customZ = null) {
+      const lanes = [-8.5, -4.5, 4.5, 8.5];
+      const x = customX !== null ? customX : lanes[Math.floor(Math.random() * lanes.length)];
+      const z = customZ !== null ? customZ : (Math.random() * 160 - 80);
+
+      const v = new SimVehicle(type, x, z);
+      simVehicles.push(v);
+      logSim("Spawned " + type.toUpperCase() + " in lane " + (x < 0 ? "Northbound" : "Southbound") + " at " + Math.round(v.speedKmh) + " km/h.", "info");
+    }
+
+    // Physics Advisory Recalculations
+    function recalcPhysicsAdvisory() {
+      const mu = FRICTION_MAP[simCondition] || 0.85;
+      const vKmh = simSpeedKmh;
+      const vMs = (vKmh * 1000) / 3600;
+
+      // Safe Speed: V_safe = sqrt(2 * mu * g * d_sight), d_sight = 45m
+      const dSight = 45.0;
+      const vSafeMs = Math.sqrt(2 * mu * 9.81 * dSight * 0.65);
+      const vSafeKmh = Math.round(vSafeMs * 3.6);
+
+      // Stopping Distance: d_stop = reaction + braking = v*1.2 + v^2 / (2 * mu * g)
+      const dReaction = vMs * 1.2;
+      const dBraking = (vMs * vMs) / (2 * mu * 9.81);
+      const dTotalStop = Math.round((dReaction + dBraking) * 10) / 10;
+
+      // Accident Probability
+      let crashRisk = 10;
+      if (vKmh > vSafeKmh) {
+        crashRisk += Math.min(80, Math.round(((vKmh - vSafeKmh) / vSafeKmh) * 100));
+      }
+      if (simCondition === 'waterlogged' || simCondition === 'icy') crashRisk += 25;
+      if (simCondition === 'potholes' && vKmh > 50) crashRisk += 30;
+      crashRisk = Math.min(99, crashRisk);
+
+      // Update UI elements
+      document.getElementById('simSafeSpeed').textContent = `${vSafeKmh} km/h`;
+      document.getElementById('simSafeSpeed').style.color = (vKmh <= vSafeKmh) ? '#10b981' : '#ef4444';
+
+      document.getElementById('simFriction').textContent = `${mu.toFixed(2)} (${simCondition.toUpperCase()})`;
+      document.getElementById('simStopDist').textContent = `${dTotalStop} m`;
+
+      const riskEl = document.getElementById('simAccidentRisk');
+      riskEl.textContent = `${crashRisk}% (${crashRisk < 35 ? 'LOW' : (crashRisk < 65 ? 'ELEVATED' : 'CRITICAL')})`;
+      riskEl.style.color = crashRisk < 35 ? '#10b981' : (crashRisk < 65 ? '#f59e0b' : '#ef4444');
+    }
+
+    function onRoadConditionChange(val) {
+      simCondition = val;
+      const mu = FRICTION_MAP[val];
+      document.getElementById('lblCond').textContent = `${val.toUpperCase()} (μ=${mu.toFixed(2)})`;
+
+      // Update Road Surface Shading
+      if (simRoadMesh) {
+        if (val === 'wet') {
+          simRoadMesh.material.color.setHex(0x12141a);
+          simRoadMesh.material.roughness = 0.3;
+          simRoadMesh.material.metalness = 0.4;
+        } else if (val === 'waterlogged') {
+          simRoadMesh.material.color.setHex(0x0e1724);
+          simRoadMesh.material.roughness = 0.15;
+          simRoadMesh.material.metalness = 0.6;
+        } else if (val === 'icy') {
+          simRoadMesh.material.color.setHex(0xdbeafe);
+          simRoadMesh.material.roughness = 0.1;
+          simRoadMesh.material.metalness = 0.7;
+        } else {
+          simRoadMesh.material.color.setHex(0x1f1f23);
+          simRoadMesh.material.roughness = 0.85;
+          simRoadMesh.material.metalness = 0.1;
+        }
+      }
+
+      logSim("Road surface updated to " + val.toUpperCase() + " (Friction coefficient: " + mu.toFixed(2) + ").", "info");
+      recalcPhysicsAdvisory();
+    }
+
+    function onSpeedSliderChange(val) {
+      simSpeedKmh = parseFloat(val);
+      document.getElementById('lblSpeed').textContent = `${val} km/h`;
+      simVehicles.forEach(v => { v.speedKmh = simSpeedKmh; });
+      recalcPhysicsAdvisory();
+    }
+
+    // Emergency Braking Trigger
+    function simTriggerBraking() {
+      simVehicles.forEach(v => { v.isBraking = true; });
+      const mu = FRICTION_MAP[simCondition];
+      const dist = document.getElementById('simStopDist').textContent;
+      logSim("EMERGENCY BRAKE TRIGGERED! Vehicles decelerating under " + simCondition.toUpperCase() + " grip (Required stopping distance: " + dist + ").", "warn");
+    }
+
+    // Crash Simulation Scenario
+    function simTriggerCrashScenario() {
+      simResetWorld();
+
+      // Spawn two cars in same lane close to each other
+      const leadCar = new SimVehicle('car', -4.5, 10);
+      leadCar.speedKmh = 25; // Slow moving vehicle ahead
+      simVehicles.push(leadCar);
+
+      const chaseCar = new SimVehicle('car', -4.5, -25);
+      chaseCar.speedKmh = simSpeedKmh; // Approaching at high speed
+      simVehicles.push(chaseCar);
+
+      logSim("CRASH SCENARIO INITIATED: Car #1 (speed: " + Math.round(chaseCar.speedKmh) + " km/h) approaching slow Car #2 (25 km/h) on " + simCondition.toUpperCase() + " road.", "warn");
+
+      setTimeout(() => {
+        chaseCar.isBraking = true;
+        const mu = FRICTION_MAP[simCondition];
+        const vMs = (chaseCar.speedKmh * 1000) / 3600;
+        const reqBraking = (vMs * vMs) / (2 * mu * 9.81);
+
+        if (reqBraking > 25) {
+          // Inevitable rear-end collision
+          setTimeout(() => {
+            chaseCar.isCrashed = true;
+            leadCar.isCrashed = true;
+            chaseCar.mesh.position.y += 0.3;
+            chaseCar.mesh.rotation.z = 0.35;
+            leadCar.mesh.rotation.y += 0.5;
+
+            logSim("COLLISION IMPACT DETECTED! Car #1 struck Car #2 at " + Math.round(chaseCar.speedKmh * 0.6) + " km/h! Reason: Available distance (25m) < Required stopping distance (" + reqBraking.toFixed(1) + "m) on " + simCondition.toUpperCase() + " surface.", "crash");
+          }, 1200);
+        } else {
+          logSim("Vehicle stopped safely within " + reqBraking.toFixed(1) + "m! Sufficient road grip prevented crash.", "info");
+        }
+      }, 500);
+    }
+
+    function simResetWorld() {
+      simVehicles.forEach(v => { simScene.remove(v.mesh); });
+      simPotholes.forEach(p => { simScene.remove(p.mesh); });
+      simVehicles = [];
+      simPotholes = [];
+      logSim("Simulation world reset.", "info");
+      simSpawnVehicle('car', -4.5, -30);
+      simSpawnVehicle('car', 4.5, 15);
+    }
+
+    function logSim(msg, type = "info") {
+      const box = document.getElementById('simLogBox');
+      const div = document.createElement('div');
+      div.className = (type === 'crash') ? 'log-crash' : ((type === 'warn') ? 'log-warn' : 'log-info');
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    // Animation Loop
+    function animateSimulator() {
+      requestAnimationFrame(animateSimulator);
+      const dt = simClock ? simClock.getDelta() : 0.016;
+
+      if (simControls) simControls.update();
+
+      // Update vehicle positions & physics
+      simVehicles.forEach(v => v.update(dt));
+
+      // Check Inter-Vehicle Collisions in Real Time
+      for (let i = 0; i < simVehicles.length; i++) {
+        for (let j = i + 1; j < simVehicles.length; j++) {
+          const v1 = simVehicles[i];
+          const v2 = simVehicles[j];
+          if (v1.isCrashed && v2.isCrashed) continue;
+
+          const dx = Math.abs(v1.x - v2.x);
+          const dz = Math.abs(v1.z - v2.z);
+          if (dx < 1.8 && dz < 4.0) {
+            v1.isCrashed = true;
+            v2.isCrashed = true;
+            v1.speedKmh = 0;
+            v2.speedKmh = 0;
+            v1.mesh.rotation.y += 0.4;
+            v2.mesh.rotation.z += 0.3;
+            logSim("INTER-VEHICLE CRASH: Direct impact in lane at " + v1.z.toFixed(0) + "m!", "crash");
+          }
+        }
+      }
+
+      if (simRenderer && simScene && simCamera) {
+        simRenderer.render(simScene, simCamera);
       }
     }
   </script>
