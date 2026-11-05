@@ -108,9 +108,12 @@ class CYPhERHazardFusion:
         incidents = acc_preds.get("incidents", acc_preds.get("details", []))
         is_accident = (
             acc_preds.get("accident_detected", False)
-            or acc_preds.get("anomaly_detected", False)
             or len(incidents) > 0
-            or acc_preds.get("event_class", "normal_traffic") not in ["normal_traffic", "None", None]
+            or acc_preds.get("event_class", "normal_traffic") in [
+                "vehicle_collision_detected",
+                "vehicle_rollover_or_jackknife",
+                "pedestrian_collision_hazard"
+            ]
         )
         if is_accident:
             hazards.append({
@@ -122,10 +125,24 @@ class CYPhERHazardFusion:
                     "details": incidents
                 },
                 "confidence": 0.90,
-                "reason": "Collision or vehicular accident confirmed by spatial collision overlap or vehicle orientation anomaly."
+                "reason": "Collision or vehicular accident confirmed by severe physical collision overlap or structural crash deformation."
             })
             overall_risk = "CRITICAL_HAZARD"
             confidence_scores.append(0.90)
+        elif acc_preds.get("has_proximity_warning", False):
+            # Proximity warning in dense traffic (elevated headway risk, NOT an accident)
+            hazards.append({
+                "hazard_type": "VEHICLE_HEADWAY_PROXIMITY_WARNING",
+                "risk_level": "ELEVATED_RISK",
+                "evidence": {
+                    "proximity_count": len(acc_preds.get("proximity_events", []))
+                },
+                "confidence": 0.70,
+                "reason": "Vehicles detected in close spatial proximity or tailgating headway."
+            })
+            if overall_risk == "LOW_RISK":
+                overall_risk = "ELEVATED_RISK"
+            confidence_scores.append(0.70)
 
         avg_conf = round(float(np.mean(confidence_scores)), 2) if confidence_scores else 0.95
 

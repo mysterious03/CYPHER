@@ -357,11 +357,12 @@ class CYPhEROrchestrator:
         acc = capabilities.get("accident", {}).get("predictions", {})
         is_accident = (
             acc.get("accident_detected", False)
-            or acc.get("anomaly_detected", False)
-            or acc.get("risk_level") in ["CRITICAL", "HIGH", "SEVERE"]
-            or acc.get("event_class", "normal_traffic") not in ["normal_traffic", "None", None]
             or len(acc.get("incidents", [])) > 0
-            or len(acc.get("details", [])) > 0
+            or acc.get("event_class", "normal_traffic") in [
+                "vehicle_collision_detected",
+                "vehicle_rollover_or_jackknife",
+                "pedestrian_collision_hazard"
+            ]
         )
         if is_accident:
             incidents = acc.get("incidents", acc.get("details", []))
@@ -376,6 +377,12 @@ class CYPhEROrchestrator:
             (ab_w, ab_h), _ = cv2.getTextSize(acc_banner, cv2.FONT_HERSHEY_SIMPLEX, font_scale * 1.15, font_thick + 1)
             cv2.rectangle(vis, (max(10, w // 2 - ab_w // 2 - 15), int(55 * scale)), (min(w - 10, w // 2 + ab_w // 2 + 15), int(55 * scale) + ab_h + 16), (0, 0, 240), -1)
             cv2.putText(vis, acc_banner, (max(20, w // 2 - ab_w // 2), int(55 * scale) + ab_h + 6), cv2.FONT_HERSHEY_SIMPLEX, font_scale * 1.15, (255, 255, 255), font_thick + 1, cv2.LINE_AA)
+        elif acc.get("has_proximity_warning", False):
+            # Subtle amber indicator for close vehicles without false collision alarms
+            prox_events = acc.get("proximity_events", [])
+            for pe in prox_events[:2]:
+                for pbox in pe.get("boxes", []):
+                    draw_badge_box(vis, pbox, "PROXIMITY (CLOSE)", (0, 165, 255), (0, 0, 0))
 
         # 7. TOP HUD BANNER (Risk, Mode Telemetry)
         risk = fusion.get("overall_road_safety_risk", "LOW_RISK")

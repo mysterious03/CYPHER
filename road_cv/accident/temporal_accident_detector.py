@@ -134,6 +134,8 @@ class TemporalAccidentDetector:
 
         # 2. Geometric Trajectory & Spatial Overlap Intelligence
         anomalies = []
+        proximity_events = []
+
         for i, v1 in enumerate(detected_vehicles):
             b1 = v1.get("box", [0, 0, 1, 1])
             w1 = max(1, b1[2] - b1[0])
@@ -143,15 +145,16 @@ class TemporalAccidentDetector:
             cname1 = str(v1.get("class_name", "vehicle")).lower()
 
             # Overturned vehicle / Rollover orientation check
-            # Normal cars have aspect 1.2 - 2.4. Overturned cars or sideways crashed vehicles have aspect < 0.75 or > 2.85
-            if (aspect < 0.75 or aspect > 2.85) and h1 > 35 and w1 > 35:
+            # Only apply to regular passenger cars (exclude long trucks, buses, motorcycles, bicycles, pedestrians)
+            is_passenger_car = cname1 in ["car", "sedan", "suv", "automobile", "vehicle"]
+            if is_passenger_car and (aspect < 0.55 or aspect > 3.5) and h1 > 60 and w1 > 60:
                 anomalies.append({
                     "type": "vehicle_rollover_or_jackknife",
-                    "confidence": 0.85,
+                    "confidence": 0.88,
                     "vehicle_box": b1,
                     "boxes": [b1],
                     "aspect_ratio": round(aspect, 2),
-                    "reason": f"Abnormal vehicular aspect ratio {aspect:.2f} indicates rollover, tilt, or severe structural distortion"
+                    "reason": f"Severe vehicle orientation abnormality (aspect {aspect:.2f}) indicates rollover, tilt, or structural crash deformation"
                 })
 
             # Inter-vehicle collision & contact overlap
@@ -173,9 +176,9 @@ class TemporalAccidentDetector:
                     iou = inter / max(1.0, float(union))
                     iomin = inter / max(1.0, float(min(area1, area2)))
 
-                    # Pedestrian / Cyclist collision check
+                    # Pedestrian / Cyclist collision check (requires substantial bounding volume penetration)
                     is_ped_incident = ("person" in [cname1, cname2] or "pedestrian" in [cname1, cname2]) and (cname1 != cname2)
-                    if is_ped_incident and iomin > 0.05:
+                    if is_ped_incident and (iomin >= 0.28 or iou >= 0.18):
                         anomalies.append({
                             "type": "pedestrian_collision_hazard",
                             "confidence": 0.92,
@@ -184,31 +187,45 @@ class TemporalAccidentDetector:
                             "boxes": [b1, b2],
                             "reason": "Pedestrian/cyclist directly in collision path or contacting vehicular bounding volume"
                         })
-                    # Vehicular collision check (in 2D projection, real vehicle contact occurs at iomin > 0.09 or iou > 0.06)
-                    elif iomin > 0.09 or iou > 0.06:
+                    # Severe vehicular collision (Requires deep physical intersection of bounding volumes)
+                    elif (iou >= 0.28 and iomin >= 0.38) or (iomin >= 0.55):
                         anomalies.append({
                             "type": "vehicle_collision_detected",
-                            "confidence": min(0.96, round(0.72 + float(iomin) * 0.25, 2)),
+                            "confidence": min(0.96, round(0.75 + float(iomin) * 0.22, 2)),
                             "overlap_iou": round(float(iou), 3),
                             "overlap_ratio": round(float(iomin), 3),
                             "vehicle_pair": [b1, b2],
                             "boxes": [b1, b2],
-                            "reason": f"Direct physical vehicular bounding overlap (IoU: {iou:.2f}, Overlap: {iomin:.2f}) indicates active collision or crash impact"
+                            "reason": f"Severe physical vehicular bounding overlap (IoU: {iou:.2f}, Overlap: {iomin:.2f}) indicates active collision or crash impact"
+                        })
+                    # Moderate proximity / Tailgating / Dense Traffic (NOT a collision!)
+                    elif (iou >= 0.10 or iomin >= 0.18):
+                        proximity_events.append({
+                            "type": "close_vehicle_proximity",
+                            "confidence": 0.65,
+                            "overlap_iou": round(float(iou), 3),
+                            "overlap_ratio": round(float(iomin), 3),
+                            "vehicle_pair": [b1, b2],
+                            "boxes": [b1, b2],
+                            "reason": f"Vehicles traveling in close proximity / adjacent lanes (IoU: {iou:.2f}, Overlap: {iomin:.2f})"
                         })
 
-        has_anomaly = len(anomalies) > 0
-        top_anomaly = anomalies[0] if has_anomaly else None
+        has_accident = len(anomalies) > 0
+        has_proximity = len(proximity_events) > 0
+        top_event = anomalies[0] if has_accident else (proximity_events[0] if has_proximity else None)
 
         return {
             "status": "success",
             "mode": "spatio_geometric_heuristic",
-            "anomaly_detected": has_anomaly,
-            "accident_detected": has_anomaly,
-            "risk_level": "CRITICAL" if has_anomaly else "NORMAL",
-            "event_class": top_anomaly["type"] if top_anomaly else "normal_traffic",
-            "confidence": top_anomaly["confidence"] if top_anomaly else 0.95,
+            "anomaly_detected": has_accident,
+            "accident_detected": has_accident,
+            "has_proximity_warning": has_proximity,
+            "risk_level": "CRITICAL" if has_accident else ("MODERATE" if has_proximity else "NORMAL"),
+            "event_class": top_event["type"] if top_event else "normal_traffic",
+            "confidence": top_event["confidence"] if top_event else 0.95,
             "buffer_frames": len(self.frame_buffer),
             "scientific_status": "TRAINED" if self.is_trained else "HEURISTIC_ACTIVE",
             "incidents": anomalies,
-            "details": anomalies
+            "details": anomalies,
+            "proximity_events": proximity_events
         }
