@@ -104,20 +104,28 @@ class CYPhERHazardFusion:
             confidence_scores.append(0.79)
 
         # 5. Video Collision / Rollover Incident
-        incidents = accident_res.get("predictions", {}).get("incidents", [])
-        if incidents:
+        acc_preds = accident_res.get("predictions", {})
+        incidents = acc_preds.get("incidents", acc_preds.get("details", []))
+        is_accident = (
+            acc_preds.get("accident_detected", False)
+            or acc_preds.get("anomaly_detected", False)
+            or len(incidents) > 0
+            or acc_preds.get("event_class", "normal_traffic") not in ["normal_traffic", "None", None]
+        )
+        if is_accident:
             hazards.append({
                 "hazard_type": "ACTIVE_COLLISION_OR_ROLLOVER_INCIDENT",
                 "risk_level": "CRITICAL_HAZARD",
                 "evidence": {
-                    "incident_count": len(incidents),
+                    "incident_count": max(1, len(incidents)),
+                    "event_class": acc_preds.get("event_class", "vehicle_collision"),
                     "details": incidents
                 },
-                "confidence": 0.86,
-                "reason": "Temporal video anomaly confirms vehicle trajectory overlap or abnormal vehicular rollover orientation."
+                "confidence": 0.90,
+                "reason": "Collision or vehicular accident confirmed by spatial collision overlap or vehicle orientation anomaly."
             })
             overall_risk = "CRITICAL_HAZARD"
-            confidence_scores.append(0.86)
+            confidence_scores.append(0.90)
 
         avg_conf = round(float(np.mean(confidence_scores)), 2) if confidence_scores else 0.95
 

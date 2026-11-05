@@ -222,35 +222,180 @@ class CYPhEROrchestrator:
         capabilities: Dict[str, Any],
         fusion: Dict[str, Any]
     ) -> np.ndarray:
-        """Draws annotations and HUD telemetry."""
+        """
+        Draws high-contrast, bold bounding boxes with solid filled label badges,
+        distinct colors for every vehicle type and defect, water/puddle tinting,
+        traffic signals, accident warnings, and real-time road condition telemetry.
+        """
         vis = frame.copy()
         h, w = vis.shape[:2]
 
-        # Draw damage boxes (Yellow)
+        # Resolution-adaptive scaling for high-res inputs (e.g. 1080p, 1440p)
+        scale = max(0.5, min(2.5, w / 960.0))
+        box_thick = max(3, int(round(3.5 * scale)))
+        font_scale = max(0.45, 0.55 * scale)
+        font_thick = max(1, int(round(2.0 * scale)))
+
+        def draw_badge_box(img, box, label, color_bgr, text_color=(255, 255, 255)):
+            x1, y1, x2, y2 = [int(v) for v in box]
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(w - 1, x2), min(h - 1, y2)
+            if x2 <= x1 or y2 <= y1:
+                return
+
+            # Thick bounding rectangle
+            cv2.rectangle(img, (x1, y1), (x2, y2), color_bgr, box_thick)
+
+            # High-tech corner highlights
+            c_len = min(int(15 * scale), (x2 - x1) // 3, (y2 - y1) // 3)
+            if c_len > 4:
+                cv2.line(img, (x1, y1), (x1 + c_len, y1), color_bgr, box_thick + 2)
+                cv2.line(img, (x1, y1), (x1, y1 + c_len), color_bgr, box_thick + 2)
+                cv2.line(img, (x2, y1), (x2 - c_len, y1), color_bgr, box_thick + 2)
+                cv2.line(img, (x2, y1), (x2, y1 + c_len), color_bgr, box_thick + 2)
+                cv2.line(img, (x1, y2), (x1 + c_len, y2), color_bgr, box_thick + 2)
+                cv2.line(img, (x1, y2), (x1, y2 - c_len), color_bgr, box_thick + 2)
+                cv2.line(img, (x2, y2), (x2 - c_len, y2), color_bgr, box_thick + 2)
+                cv2.line(img, (x2, y2), (x2, y2 - c_len), color_bgr, box_thick + 2)
+
+            # Solid filled badge background for clear readability
+            (tw, th), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thick)
+            badge_h = th + int(8 * scale)
+            badge_y1 = max(0, y1 - badge_h)
+            badge_y2 = y1 if y1 >= badge_h else y1 + badge_h
+            badge_x2 = min(w, x1 + tw + int(10 * scale))
+
+            cv2.rectangle(img, (x1, badge_y1), (badge_x2, badge_y2), color_bgr, -1)
+            text_y = badge_y2 - int(4 * scale)
+            cv2.putText(
+                img, label, (x1 + int(4 * scale), text_y),
+                cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thick, cv2.LINE_AA
+            )
+
+        # 1. WATER & PUDDLES
+        water_cap = capabilities.get("water", {})
+        if water_cap.get("status") == "success":
+            preds = water_cap.get("predictions", {})
+            puddles = preds.get("puddles", [])
+            for p in puddles:
+                pbox = p.get("box", [0, 0, 0, 0])
+                pconf = p.get("confidence", 0)
+                draw_badge_box(vis, pbox, f"PUDDLE {pconf:.2f}", (255, 210, 0), (10, 10, 10))
+
+            if preds.get("water_detected", False) or preds.get("water_severity", "NONE") != "NONE":
+                pct = preds.get("pct_road_submerged", preds.get("coverage_ratio", 0) * 100)
+                water_banner = f"WATERLOGGED ROAD: {pct:.1f}% SUBMERGED"
+                (w_w, w_h), _ = cv2.getTextSize(water_banner, cv2.FONT_HERSHEY_SIMPLEX, font_scale * 1.1, font_thick)
+                cv2.rectangle(vis, (15, h - int(75 * scale)), (25 + w_w, h - int(45 * scale)), (255, 160, 0), -1)
+                cv2.putText(vis, water_banner, (20, h - int(52 * scale)), cv2.FONT_HERSHEY_SIMPLEX, font_scale * 1.1, (20, 20, 20), font_thick, cv2.LINE_AA)
+
+        # 2. ROAD DAMAGE (Cracks & Potholes with distinct hazard colors)
+        DAMAGE_COLORS = {
+            "pothole": (30, 30, 255),           # Crimson Red
+            "d40": (30, 30, 255),
+            "alligator crack": (0, 100, 255),   # Deep Orange
+            "d20": (0, 100, 255),
+            "longitudinal crack": (0, 180, 255),# Vivid Amber
+            "d00": (0, 180, 255),
+            "transverse crack": (0, 220, 255),  # Bright Gold
+            "d10": (0, 220, 255),
+            "defect": (0, 165, 255)
+        }
         for d in capabilities.get("damage", {}).get("predictions", []):
             box = d.get("box", [0, 0, 0, 0])
-            cname = d.get("class_name", "defect")
+            cname = str(d.get("class_name", "defect")).lower()
             cf = d.get("confidence", 0)
-            cv2.rectangle(vis, (box[0], box[1]), (box[2], box[3]), (0, 255, 255), 2)
-            cv2.putText(vis, f"{cname} {cf:.2f}", (box[0], max(15, box[1] - 5)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+            col = DAMAGE_COLORS.get(cname, (0, 165, 255))
+            draw_badge_box(vis, box, f"{cname.upper()} {cf:.2f}", col, (255, 255, 255))
 
-        # Draw vehicles (Green)
+        # 3. VEHICLES & ROAD USERS (Distinct colors per vehicle class)
+        VEHICLE_COLORS = {
+            "car": (255, 190, 0),           # Bright Cyan-Blue
+            "truck": (0, 130, 255),         # Deep Orange
+            "bus": (220, 20, 220),          # Neon Purple / Magenta
+            "motorcycle": (0, 230, 255),    # Electric Yellow
+            "bicycle": (80, 240, 100),      # Spring Green
+            "person": (120, 80, 255),       # Coral Pink
+            "pedestrian": (120, 80, 255),
+            "auto_rickshaw": (0, 190, 255), # Indian Rickshaw Gold
+            "vehicle": (0, 255, 120)        # Emerald
+        }
         for v in capabilities.get("vehicles", {}).get("predictions", []):
             box = v.get("box", [0, 0, 0, 0])
             tid = v.get("track_id", "")
-            cname = v.get("class_name", "vehicle")
-            cv2.rectangle(vis, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
-            cv2.putText(vis, f"ID:{tid} {cname}", (box[0], max(15, box[1] - 5)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            cname = str(v.get("class_name", "vehicle")).lower()
+            cf = v.get("confidence", 0)
+            col = VEHICLE_COLORS.get(cname, (0, 255, 120))
+            tag = f"{cname.upper()} #{tid} ({cf:.2f})" if tid else f"{cname.upper()} ({cf:.2f})"
+            is_light_bg = col in [(0, 230, 255), (80, 240, 100), (0, 255, 120), (255, 190, 0)]
+            draw_badge_box(vis, box, tag, col, (10, 10, 10) if is_light_bg else (255, 255, 255))
 
-        # Draw top HUD banner
+        # 4. TRAFFIC SIGNALS
+        sig_data = capabilities.get("traffic_signals", {}).get("predictions", {})
+        sig_list = sig_data.get("signals", []) if isinstance(sig_data, dict) else (sig_data if isinstance(sig_data, list) else [])
+        for s in sig_list:
+            if not isinstance(s, dict):
+                continue
+            box = s.get("box", [0, 0, 0, 0])
+            sname = str(s.get("signal_state", s.get("class_name", "signal"))).lower()
+            scf = s.get("state_confidence", s.get("detection_conf", 0))
+            scol = (0, 0, 255) if "red" in sname else ((0, 255, 0) if "green" in sname else (0, 220, 255))
+            draw_badge_box(vis, box, f"SIGNAL: {sname.upper()} {scf:.2f}", scol, (255, 255, 255))
+
+        # 5. OBSTACLES & DEBRIS
+        obs_data = capabilities.get("obstacles", {}).get("predictions", {})
+        obs_list = obs_data.get("obstacles", []) if isinstance(obs_data, dict) else (obs_data if isinstance(obs_data, list) else [])
+        for o in obs_list:
+            if not isinstance(o, dict):
+                continue
+            box = o.get("box", [0, 0, 0, 0])
+            oname = str(o.get("category", o.get("class_name", "obstacle"))).upper()
+            ocf = o.get("confidence", 0)
+            draw_badge_box(vis, box, f"OBSTACLE: {oname} {ocf:.2f}", (180, 100, 240), (255, 255, 255))
+
+        # 6. ACCIDENT / COLLISION HAZARDS
+        acc = capabilities.get("accident", {}).get("predictions", {})
+        is_accident = (
+            acc.get("accident_detected", False)
+            or acc.get("anomaly_detected", False)
+            or acc.get("risk_level") in ["CRITICAL", "HIGH", "SEVERE"]
+            or acc.get("event_class", "normal_traffic") not in ["normal_traffic", "None", None]
+            or len(acc.get("incidents", [])) > 0
+            or len(acc.get("details", [])) > 0
+        )
+        if is_accident:
+            incidents = acc.get("incidents", acc.get("details", []))
+            for inc in incidents:
+                boxes_to_draw = inc.get("boxes", inc.get("vehicle_pair", []))
+                if not boxes_to_draw and "vehicle_box" in inc:
+                    boxes_to_draw = [inc["vehicle_box"]]
+                for abox in boxes_to_draw:
+                    draw_badge_box(vis, abox, "COLLISION / CRASH", (0, 0, 255), (255, 255, 255))
+
+            acc_banner = "(!) CRITICAL ACCIDENT / COLLISION DETECTED"
+            (ab_w, ab_h), _ = cv2.getTextSize(acc_banner, cv2.FONT_HERSHEY_SIMPLEX, font_scale * 1.15, font_thick + 1)
+            cv2.rectangle(vis, (max(10, w // 2 - ab_w // 2 - 15), int(55 * scale)), (min(w - 10, w // 2 + ab_w // 2 + 15), int(55 * scale) + ab_h + 16), (0, 0, 240), -1)
+            cv2.putText(vis, acc_banner, (max(20, w // 2 - ab_w // 2), int(55 * scale) + ab_h + 6), cv2.FONT_HERSHEY_SIMPLEX, font_scale * 1.15, (255, 255, 255), font_thick + 1, cv2.LINE_AA)
+
+        # 7. TOP HUD BANNER (Risk, Mode Telemetry)
         risk = fusion.get("overall_road_safety_risk", "LOW_RISK")
-        risk_color = (0, 255, 0) if risk == "LOW_RISK" else ((0, 165, 255) if "MODERATE" in risk else (0, 0, 255))
+        risk_color = (0, 255, 100) if "LOW" in risk else ((0, 165, 255) if "MODERATE" in risk else (30, 30, 255))
 
-        cv2.rectangle(vis, (0, 0), (w, 50), (20, 20, 20), -1)
-        hud_text = f"CYPhER ROAD PERCEPTION | RISK: {risk} | HAZARDS: {fusion.get('detected_hazards_count', 0)}"
-        cv2.putText(vis, hud_text, (15, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.7, risk_color, 2)
+        hud_h = int(48 * scale)
+        cv2.rectangle(vis, (0, 0), (w, hud_h), (18, 18, 22), -1)
+        hud_text = f"CYPhER | RISK: {risk} | HAZARDS: {fusion.get('detected_hazards_count', 0)}"
+
+        # Add Surface info if available
+        surf = capabilities.get("surface", {}).get("predictions", {})
+        if surf:
+            mat = surf.get("material", "")
+            cond = surf.get("visual_condition", "")
+            if mat:
+                hud_text += f" | {mat.upper()}"
+            if cond:
+                hud_text += f" ({cond.upper()})"
+
+        cv2.putText(vis, hud_text, (int(12 * scale), int(30 * scale)), cv2.FONT_HERSHEY_SIMPLEX, font_scale * 1.05, risk_color, font_thick, cv2.LINE_AA)
 
         return vis
 

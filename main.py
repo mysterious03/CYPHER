@@ -8,7 +8,8 @@ Supports:
     python main.py --mode all --source Road.jpg
     python main.py --mode vehicles --source test_video.mp4
     python main.py --mode accident --source test_video.mp4
-    python main.py --mode all --source 0
+    python main.py --mode damage --stream --source 0
+    python main.py --mode damage --stream --source http://192.168.1.35:8080/video
 - Interactive mode selector when run without arguments.
 - Standard JSON schema output and composite annotated visualization.
 """
@@ -21,8 +22,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-# Add workspace to sys.path
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Add workspace to sys.path and ensure project directory is working directory
+PROJECT_ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(PROJECT_ROOT))
+os.chdir(PROJECT_ROOT)
 
 from road_cv.core.orchestrator import CYPhEROrchestrator, VALID_MODES
 
@@ -64,7 +67,7 @@ def interactive_mode_selector() -> tuple:
     else:
         selected_mode = choice
 
-    source = input("Enter input source (image path, video path, or '0' for camera) [default: Road.jpg]: ").strip()
+    source = input("Enter input source (image path, video path, '0' for camera, or 'http://...' for phone stream) [default: Road.jpg]: ").strip()
     if not source:
         source = "Road.jpg"
 
@@ -84,7 +87,12 @@ def main():
         "--source",
         type=str,
         default=None,
-        help="Input image path, video path, or camera device index (e.g. 0)"
+        help="Input image path, video path, camera device index (e.g. 0), or phone IP stream URL"
+    )
+    parser.add_argument(
+        "--stream",
+        action="store_true",
+        help="Run in continuous real-time live camera streaming mode"
     )
     parser.add_argument(
         "--output-dir",
@@ -106,9 +114,21 @@ def main():
 
     args = parser.parse_args()
 
+    # If stream flag is set or source starts with http/rtsp, launch live streaming
+    if args.stream or (args.source and (args.source.startswith("http://") or args.source.startswith("https://") or args.source.startswith("rtsp://"))):
+        from stream import run_live_stream
+        selected_mode = args.mode or "damage"
+        source_path = args.source or "0"
+        run_live_stream(source=source_path, mode=selected_mode, output_dir=args.output_dir)
+        return
+
     # If no arguments provided, launch interactive selector
     if args.mode is None and args.source is None:
         selected_mode, source_path = interactive_mode_selector()
+        if source_path.startswith("http://") or source_path.startswith("https://") or source_path.startswith("rtsp://"):
+            from stream import run_live_stream
+            run_live_stream(source=source_path, mode=selected_mode, output_dir=args.output_dir)
+            return
     else:
         selected_mode = args.mode or "all"
         source_path = args.source or "Road.jpg"

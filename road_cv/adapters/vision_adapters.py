@@ -19,9 +19,34 @@ from road_cv.water.water_analyzer import WaterHazardAnalyzer
 class DamageAdapter(BaseAdapter):
     """Module 1: Road Damage Detection (D00, D10, D20, D40)"""
 
-    def __init__(self, checkpoint: str = "runs/detect/runs/road_damage/B0_baseline/weights/best.pt", conf_thresh: float = 0.25):
-        super().__init__(mode="damage", name="Custom YOLO26n Road Damage Detector")
-        self.checkpoint = checkpoint
+    DEFAULT_CHECKPOINTS = [
+        "models/pretrained/damage/yolo12s_RDD2022_best.pt",
+        "runs/detect/road_damage_v22/weights/best.pt",
+        "runs/detect/runs/road_damage/B0_baseline/weights/best.pt"
+    ]
+
+    CLASS_MAPPING = {
+        "d00": "longitudinal crack",
+        "d10": "transverse crack",
+        "d20": "alligator crack",
+        "d40": "pothole",
+        "repair": "road repair patch",
+        "d00_longitudinal_crack": "longitudinal crack",
+        "d10_transverse_crack": "transverse crack",
+        "d20_alligator_crack": "alligator crack",
+        "d40_pothole": "pothole"
+    }
+
+    def __init__(self, checkpoint: Optional[str] = None, conf_thresh: float = 0.15):
+        super().__init__(mode="damage", name="High-Accuracy YOLO Road Damage & Pothole Detector")
+        if checkpoint:
+            self.checkpoint = checkpoint
+        else:
+            self.checkpoint = self.DEFAULT_CHECKPOINTS[-1]
+            for ck in self.DEFAULT_CHECKPOINTS:
+                if Path(ck).exists():
+                    self.checkpoint = ck
+                    break
         self.conf_thresh = conf_thresh
 
     def load(self, device: Optional[str] = None) -> bool:
@@ -65,7 +90,20 @@ class DamageAdapter(BaseAdapter):
                 else:
                     scale = "large"
 
-                cname = results.names.get(c, str(c))
+                raw_cname = results.names.get(c, str(c)).lower().strip()
+                if c == 3 or "d40" in raw_cname or "pothole" in raw_cname:
+                    cname = "pothole"
+                elif c == 2 or "d20" in raw_cname or "alligator" in raw_cname:
+                    cname = "alligator crack"
+                elif c == 0 or "d00" in raw_cname or "longitudinal" in raw_cname:
+                    cname = "longitudinal crack"
+                elif c == 1 or "d10" in raw_cname or "transverse" in raw_cname:
+                    cname = "transverse crack"
+                elif "repair" in raw_cname:
+                    cname = "road repair patch"
+                else:
+                    cname = self.CLASS_MAPPING.get(raw_cname, raw_cname)
+
                 predictions.append({
                     "class_id": int(c),
                     "class_name": cname,
@@ -86,7 +124,7 @@ class DamageAdapter(BaseAdapter):
 class VehicleAdapter(BaseAdapter):
     """Module 2: Vehicle & Road User Detection and Tracking"""
 
-    def __init__(self, checkpoint: str = "yolo26n-seg.pt", conf_thresh: float = 0.35):
+    def __init__(self, checkpoint: str = "yolo26n-seg.pt", conf_thresh: float = 0.22):
         super().__init__(mode="vehicles", name="YOLO26n Vehicle Instance Segmenter & Tracker")
         self.checkpoint = checkpoint
         self.conf_thresh = conf_thresh
