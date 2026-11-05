@@ -866,7 +866,18 @@
     }
 
     function startStream() {
-      const source = encodeURIComponent(document.getElementById('streamUrl').value.trim());
+      let rawSource = document.getElementById('streamUrl').value.trim();
+      if (rawSource && !rawSource.startsWith('http://') && !rawSource.startsWith('https://') && isNaN(rawSource)) {
+        rawSource = 'http://' + rawSource;
+      }
+      if (rawSource.startsWith('http://') || rawSource.startsWith('https://')) {
+        if (!rawSource.endsWith('/video') && !rawSource.endsWith('.mjpg') && !rawSource.endsWith('/shot.jpg') && !rawSource.endsWith('.mp4')) {
+          rawSource = rawSource.replace(/\/+$/, '') + '/video';
+        }
+      }
+      document.getElementById('streamUrl').value = rawSource;
+
+      const source = encodeURIComponent(rawSource);
       const mode = document.getElementById('liveMode').value;
       const viewerImg = document.getElementById('viewerImg');
       const emptyBox = document.getElementById('viewerEmpty');

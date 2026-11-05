@@ -212,14 +212,26 @@ def stream_feed(
     stream_active = True
     orch = get_orchestrator()
 
-    # Determine input capture source
-    if source.isdigit():
-        cap = cv2.VideoCapture(int(source), cv2.CAP_DSHOW)
+    # Determine input capture source & normalize IP webcam URLs
+    target_src = source.strip()
+    if target_src.isdigit():
+        cap = cv2.VideoCapture(int(target_src), cv2.CAP_DSHOW)
     else:
-        cap = cv2.VideoCapture(source)
+        # Prepend http:// if missing
+        if not target_src.startswith("http://") and not target_src.startswith("https://"):
+            target_src = "http://" + target_src
+        # Append /video if user typed IP:port without endpoint
+        if target_src.startswith("http://") or target_src.startswith("https://"):
+            if not target_src.endswith("/video") and not target_src.endswith(".mjpg") and not target_src.endswith("/shot.jpg") and not target_src.endswith(".mp4"):
+                target_src = target_src.rstrip("/") + "/video"
+        
+        cap = cv2.VideoCapture(target_src)
+        if not cap.isOpened():
+            # Fallback to literal source parameter
+            cap = cv2.VideoCapture(source)
 
     if not cap.isOpened():
-        raise HTTPException(status_code=400, detail=f"Cannot connect to camera at '{source}'.")
+        raise HTTPException(status_code=400, detail=f"Cannot connect to camera at '{source}'. Attempted: '{target_src}'.")
 
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
@@ -234,6 +246,12 @@ def stream_feed(
                 if not ret or frame is None:
                     time.sleep(0.04)
                     continue
+
+                # Optimize high-res phone captures (e.g. 1440p or 1080p) for real-time GPU processing
+                h, w = frame.shape[:2]
+                if max(h, w) > 960:
+                    scale = 960.0 / max(h, w)
+                    frame = cv2.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
 
                 # Run inference on frame
                 t0 = time.perf_counter()
