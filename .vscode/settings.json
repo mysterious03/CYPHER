@@ -1,0 +1,7 @@
+{
+  "python.defaultInterpreterPath": "C:\\Users\\ASUS\\Python311\\python.exe",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}"
+  ]
+}
+
