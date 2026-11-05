@@ -242,9 +242,9 @@
 </div>
 </div>
 
-<!-- Three.js + Cannon-es -->
+<!-- Three.js + Cannon.js UMD -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
 
 <script>
 // ═════════════════════════════════════════════════════════════════════
@@ -365,39 +365,67 @@ function playWarningBeep() {
   } catch(e) {}
 }
 
+// ─── ERROR HANDLER & LOADING FAILSAFE ────────────────────────
+window.addEventListener('error', function(e) {
+  console.error("Simulation error caught:", e);
+  const loadEl = document.getElementById('loading');
+  if (loadEl) loadEl.style.display = 'none';
+  if (typeof logMsg === 'function') logMsg("Notice: " + (e.message || "Script initialized"), "warn");
+});
+
+setTimeout(function() {
+  const loadEl = document.getElementById('loading');
+  if (loadEl && loadEl.style.display !== 'none') {
+    loadEl.style.display = 'none';
+  }
+}, 2500);
+
 // ─── INITIALIZATION ──────────────────────────────────────────
 async function init() {
-  setLoadMsg('Configuring rigid-body physics engine…', 15);
-  initPhysics();
+  try {
+    setLoadMsg('Configuring rigid-body physics engine…', 15);
+    initPhysics();
 
-  setLoadMsg('Setting up WebGL 3D world & Dashcam PIP…', 35);
-  initThree();
+    setLoadMsg('Setting up WebGL 3D world & Dashcam PIP…', 35);
+    initThree();
 
-  setLoadMsg('Constructing 4-way intersection & signals…', 55);
-  buildCity();
+    setLoadMsg('Constructing 4-way intersection & signals…', 55);
+    buildCity();
 
-  setLoadMsg('Initializing autonomous RL agent fleet…', 75);
-  for (let i = 0; i < targetAICount; i++) spawnAIVehicle();
+    setLoadMsg('Initializing autonomous RL agent fleet…', 75);
+    for (let i = 0; i < targetAICount; i++) spawnAIVehicle();
 
-  setLoadMsg('Activating sensor raycasting & CV trackers…', 90);
-  clock = new THREE.Clock();
-  requestAnimationFrame(loop);
+    setLoadMsg('Activating sensor raycasting & CV trackers…', 90);
+    clock = new THREE.Clock();
+    requestAnimationFrame(loop);
 
-  setLoadMsg('Autonomous World Ready!', 100);
-  setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 500);
+    setLoadMsg('Autonomous World Ready!', 100);
+    setTimeout(() => {
+      const loadEl = document.getElementById('loading');
+      if (loadEl) loadEl.style.display = 'none';
+    }, 400);
 
-  logMsg('CYPhER autonomous fleet active with forward CV radar', 'ok');
-  updatePhysicsHUD();
+    logMsg('CYPhER autonomous fleet active with forward CV radar', 'ok');
+    updatePhysicsHUD();
+  } catch(err) {
+    console.error("Initialization error:", err);
+    const loadEl = document.getElementById('loading');
+    if (loadEl) loadEl.style.display = 'none';
+    logMsg("Engine alert: " + (err.message || err), 'crash');
+  }
 }
 
 function setLoadMsg(msg, pct) {
-  document.getElementById('load-msg').textContent = msg;
-  document.getElementById('load-fill').style.width = pct + '%';
+  const msgEl = document.getElementById('load-msg');
+  const fillEl = document.getElementById('load-fill');
+  if (msgEl) msgEl.textContent = msg;
+  if (fillEl) fillEl.style.width = pct + '%';
 }
 
-// ─── PHYSICS ENGINE (Cannon-es) ──────────────────────────────
+// ─── PHYSICS ENGINE (Cannon.js) ──────────────────────────────
 function initPhysics() {
-  PHYSICS_WORLD = new CANNON.World({ gravity: new CANNON.Vec3(0, -G, 0) });
+  PHYSICS_WORLD = new CANNON.World();
+  PHYSICS_WORLD.gravity.set(0, -G, 0);
   PHYSICS_WORLD.broadphase = new CANNON.SAPBroadphase(PHYSICS_WORLD);
   PHYSICS_WORLD.allowSleep = true;
   PHYSICS_WORLD.defaultContactMaterial.friction = SURFACE_MU[roadSurface];
@@ -406,7 +434,7 @@ function initPhysics() {
   // Ground body
   const groundBody = new CANNON.Body({ mass: 0 });
   groundBody.addShape(new CANNON.Plane());
-  groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+  groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
   PHYSICS_WORLD.addBody(groundBody);
 }
 

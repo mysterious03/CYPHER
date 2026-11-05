@@ -131,7 +131,10 @@
 
     /* Full width layout for simulation tab */
     .sim-mode main {
-      grid-template-columns: 1.35fr 0.85fr;
+      grid-template-columns: 1fr;
+    }
+    .sim-mode #rightPanel {
+      display: none !important;
     }
 
     @media (max-width: 1024px) {
@@ -504,7 +507,10 @@
     <!-- Left Column: Input and Visual Viewer / 3D Canvas -->
     <section class="panel">
       <div class="panel-header">
-        <span class="panel-title" id="viewerTitle">Input & Perception Viewer</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="panel-title" id="viewerTitle">Input & Perception Viewer</span>
+          <a id="simFullscreenBtn" href="/simulator" target="_blank" class="btn btn-secondary" style="display: none; text-decoration: none; font-size: 0.72rem; padding: 4px 10px;">↗ Open Fullscreen Window</a>
+        </div>
         <div class="controls-row" id="viewToggleButtons" style="display: none;">
           <button class="btn btn-secondary" onclick="toggleView('overlay')">Annotated</button>
           <button class="btn btn-secondary" onclick="toggleView('original')">Original</button>
@@ -598,7 +604,7 @@
     </section>
 
     <!-- Right Column: Safety Scorecard & Hazard Intelligence / Simulator Controls -->
-    <section class="panel">
+    <section class="panel" id="rightPanel">
       <div class="panel-header">
         <span class="panel-title" id="rightPanelTitle">Safety Telemetry & Scoring</span>
         <span id="analysisStatus" style="font-size: 0.75rem; color: var(--text-dim);">Standby</span>
@@ -768,12 +774,17 @@
       document.getElementById('viewerTitle').textContent = isSim ? '3D Road Physics Simulation World' : 'Input & Perception Viewer';
       document.getElementById('rightPanelTitle').textContent = isSim ? 'Simulation Controls & Crash Diagnostics' : 'Safety Telemetry & Scoring';
 
+      document.getElementById('simFullscreenBtn').style.display = isSim ? 'inline-block' : 'none';
+
       if (tab !== 'live' && isStreaming) {
         stopStream();
       }
 
-      if (isSim && !simInitialized) {
-        init3DSimulator();
+      if (isSim) {
+        const frame = document.getElementById('simWorldFrame');
+        if (frame && !frame.src.endsWith('/simulator')) {
+          frame.src = '/simulator';
+        }
       }
     }
 
