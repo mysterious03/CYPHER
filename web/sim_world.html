@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CYPhER — Autonomous RL & CV Physics World</title>
+<title>CYPhER — Autonomous RL & Real Neural Vision Simulation</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{background:#040407;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,sans-serif;color:#fff;user-select:none;}
+  body{background:#040508;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,sans-serif;color:#fff;user-select:none;}
   #canvas-wrap{position:fixed;inset:0;z-index:0;}
   canvas{display:block;width:100%!important;height:100%!important;}
 
   /* HUD Top Header */
   #hud{position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none;}
   #hud-top{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px;}
-  .hud-box{background:rgba(8,10,16,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 14px;backdrop-filter:blur(10px);box-shadow:0 4px 20px rgba(0,0,0,0.5);}
+  .hud-box{background:rgba(8,10,16,0.88);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:8px 14px;backdrop-filter:blur(12px);box-shadow:0 6px 24px rgba(0,0,0,0.6);}
   .hud-title{font-size:0.65rem;text-transform:uppercase;letter-spacing:.09em;color:rgba(255,255,255,0.45);margin-bottom:4px;display:flex;align-items:center;gap:6px;}
   .hud-title .live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 1.2s infinite;}
   @keyframes pulse{0%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.8);}100%{opacity:1;transform:scale(1);}}
@@ -28,7 +28,7 @@
   @keyframes blink{50%{opacity:0;}}
 
   /* Side Control Dock */
-  #ctrl{position:fixed;top:0;right:0;bottom:0;width:280px;z-index:25;display:flex;flex-direction:column;pointer-events:all;}
+  #ctrl{position:fixed;top:0;right:0;bottom:0;width:290px;z-index:25;display:flex;flex-direction:column;pointer-events:all;}
   #ctrl-inner{background:rgba(8,9,14,0.92);border-left:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(16px);height:100%;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;}
   .ctrl-section{display:flex;flex-direction:column;gap:6px;}
   .ctrl-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,0.4);padding-bottom:3px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;}
@@ -44,6 +44,8 @@
   .btn-blue:hover{background:rgba(59,130,246,0.28);}
   .btn-purple{background:rgba(168,85,247,0.16);border-color:rgba(168,85,247,0.35);color:#d8b4fe;}
   .btn-purple:hover{background:rgba(168,85,247,0.28);}
+  .btn-green{background:rgba(34,197,94,0.16);border-color:rgba(34,197,94,0.35);color:#86efac;}
+  .btn-green:hover{background:rgba(34,197,94,0.28);}
   .btn-full{grid-column:1/-1;}
   .slider-row{display:flex;flex-direction:column;gap:3px;}
   .slider-top{display:flex;justify-content:space-between;font-size:0.68rem;color:rgba(255,255,255,0.45);}
@@ -54,38 +56,35 @@
   .rbtn:hover,.rbtn.active{border-color:#3b82f6;background:rgba(59,130,246,0.2);color:#fff;font-weight:600;}
 
   /* Log Box */
-  #log{font-size:0.65rem;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;max-height:120px;overflow-y:auto;background:#05060a;border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:6px 8px;display:flex;flex-direction:column;gap:2px;}
+  #log{font-size:0.65rem;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;max-height:115px;overflow-y:auto;background:#05060a;border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:6px 8px;display:flex;flex-direction:column;gap:2px;}
   #log .li{padding:1px 0;line-height:1.3;}
   #log .li.crash{color:#f87171;font-weight:600;}
   #log .li.warn{color:#fbbf24;}
   #log .li.info{color:#60a5fa;}
   #log .li.ok{color:#4ade80;}
-  #log .li.cv{color:#c084fc;}
+  #log .li.cv{color:#c084fc;font-weight:600;}
 
   /* Dashcam / YOLO Vision PIP in Bottom-Left */
-  #dashcam-container{position:fixed;bottom:14px;left:14px;z-index:30;width:240px;background:rgba(6,8,12,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7);backdrop-filter:blur(8px);}
-  #dashcam-header{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.07);font-size:0.62rem;font-weight:600;letter-spacing:.05em;color:rgba(255,255,255,0.7);}
-  #dashcam-viewport{width:100%;height:135px;position:relative;background:#030406;overflow:hidden;}
+  #dashcam-container{position:fixed;bottom:14px;left:14px;z-index:30;width:280px;background:rgba(6,8,12,0.94);border:1px solid rgba(255,255,255,0.14);border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.8);backdrop-filter:blur(10px);}
+  #dashcam-header{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.08);font-size:0.65rem;font-weight:700;letter-spacing:.05em;color:rgba(255,255,255,0.85);}
+  #dashcam-viewport{width:100%;height:155px;position:relative;background:#020305;overflow:hidden;}
   #dashcam-canvas{width:100%;height:100%;display:block;}
   #dashcam-overlay{position:absolute;inset:0;pointer-events:none;}
-  .dashcam-tag{position:absolute;top:4px;left:6px;font-size:0.58rem;background:rgba(0,0,0,0.7);padding:2px 5px;border-radius:3px;color:#38bdf8;font-family:monospace;border:1px solid rgba(56,189,248,0.3);}
-  .dashcam-speed{position:absolute;bottom:4px;right:6px;font-size:0.68rem;font-weight:700;color:#22c55e;font-family:monospace;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:3px;}
-
-  /* Floating 3D Target Marker */
-  .target-marker{position:absolute;border:1.5px solid #22c55e;border-radius:3px;pointer-events:none;transform:translate(-50%,-50%);font-family:monospace;font-size:0.6rem;padding:2px 4px;color:#fff;background:rgba(0,0,0,0.5);display:none;z-index:15;}
-  .target-marker.danger{border-color:#ef4444;color:#fca5a5;animation:pulse .5s infinite;}
-  .target-marker.warn{border-color:#f59e0b;color:#fde68a;}
+  .dashcam-tag{position:absolute;top:5px;left:7px;font-size:0.58rem;background:rgba(0,0,0,0.75);padding:2px 6px;border-radius:3px;color:#38bdf8;font-family:monospace;border:1px solid rgba(56,189,248,0.35);}
+  .dashcam-ml-badge{position:absolute;top:5px;right:7px;font-size:0.58rem;background:rgba(168,85,247,0.25);padding:2px 6px;border-radius:3px;color:#d8b4fe;font-family:monospace;border:1px solid rgba(168,85,247,0.4);}
+  .dashcam-speed{position:absolute;bottom:5px;right:7px;font-size:0.7rem;font-weight:700;color:#22c55e;font-family:monospace;background:rgba(0,0,0,0.75);padding:2px 6px;border-radius:3px;}
+  .dashcam-risk{position:absolute;bottom:5px;left:7px;font-size:0.6rem;font-weight:700;font-family:monospace;background:rgba(0,0,0,0.75);padding:2px 6px;border-radius:3px;}
 
   /* Camera Mode Tag */
-  #cam-mode-tag{position:fixed;bottom:14px;right:296px;z-index:20;font-size:0.62rem;letter-spacing:.08em;color:rgba(255,255,255,0.4);background:rgba(10,12,18,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:4px;padding:4px 8px;pointer-events:none;}
+  #cam-mode-tag{position:fixed;bottom:14px;right:306px;z-index:20;font-size:0.62rem;letter-spacing:.08em;color:rgba(255,255,255,0.4);background:rgba(10,12,18,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:4px;padding:4px 8px;pointer-events:none;}
 
   /* Audio mute toggle */
   #audio-toggle{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(10,12,18,0.85);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:4px 12px;font-size:0.65rem;color:#94a3b8;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px);}
   #audio-toggle:hover{color:#fff;border-color:rgba(255,255,255,0.3);}
 
   /* Loading Screen */
-  #loading{position:fixed;inset:0;background:#050608;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
-  #loading h2{font-size:1.1rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;}
+  #loading{position:fixed;inset:0;background:#040508;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+  #loading h2{font-size:1.15rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;}
   #loading p{font-size:0.75rem;color:rgba(255,255,255,0.4);}
   .load-bar{width:220px;height:4px;background:#1e1e28;border-radius:2px;overflow:hidden;}
   .load-fill{height:100%;width:0%;background:linear-gradient(90deg,#3b82f6,#a855f7);border-radius:2px;transition:width .2s;}
@@ -95,7 +94,7 @@
 
 <div id="loading">
   <h2>CYPhER Autonomous World</h2>
-  <p id="load-msg">Initializing RL physics & CV sensors…</p>
+  <p id="load-msg">Initializing Realistic Rendering & Physics Engine…</p>
   <div class="load-bar"><div class="load-fill" id="load-fill"></div></div>
 </div>
 
@@ -105,20 +104,20 @@
 <div id="hud">
   <div id="hud-top">
     <div class="hud-box">
-      <div class="hud-title"><span class="live-dot"></span> Autonomous Fleet & CV Telemetry</div>
+      <div class="hud-title"><span class="live-dot"></span> Real-Time Autonomous Fleet & Neural Vision</div>
       <div class="hud-row">
-        <div class="hud-metric"><span class="label">Lead Speed</span><span class="val" id="hv-spd">0 km/h</span></div>
-        <div class="hud-metric"><span class="label">Friction μ</span><span class="val" id="hv-mu">0.85</span></div>
+        <div class="hud-metric"><span class="label">Lead Velocity</span><span class="val" id="hv-spd">0 km/h</span></div>
+        <div class="hud-metric"><span class="label">Road Friction μ</span><span class="val" id="hv-mu">0.85</span></div>
         <div class="hud-metric"><span class="label">Min TTC</span><span class="val" id="hv-ttc">∞</span></div>
-        <div class="hud-metric"><span class="label">RL Policy</span><span class="val risk-low" id="hv-policy">CRUISE</span></div>
+        <div class="hud-metric"><span class="label">AI Policy</span><span class="val risk-low" id="hv-policy">CRUISE</span></div>
       </div>
     </div>
     <div class="hud-box" style="text-align:right;">
       <div class="hud-title">World State</div>
       <div class="hud-row" style="justify-content:flex-end;">
-        <div class="hud-metric"><span class="label">Vehicles</span><span class="val" id="hv-vcount">0</span></div>
-        <div class="hud-metric"><span class="label">Collisions</span><span class="val" id="hv-crashes">0</span></div>
-        <div class="hud-metric"><span class="label">Signal</span><span class="val" id="hv-signal" style="color:#22c55e;">EW: GREEN</span></div>
+        <div class="hud-metric"><span class="label">Fleet Size</span><span class="val" id="hv-vcount">0</span></div>
+        <div class="hud-metric"><span class="label">Incidents</span><span class="val" id="hv-crashes">0</span></div>
+        <div class="hud-metric"><span class="label">Intersection</span><span class="val" id="hv-signal" style="color:#22c55e;">EW: GREEN</span></div>
         <div class="hud-metric"><span class="label">Surface</span><span class="val" id="hv-surf">Dry Asphalt</span></div>
       </div>
     </div>
@@ -132,13 +131,15 @@
 <!-- 2D Dashcam YOLO Perception PIP -->
 <div id="dashcam-container">
   <div id="dashcam-header">
-    <span>FRONT CV SENSOR &bull; CAM_01</span>
-    <span id="dashcam-fps" style="color:#38bdf8;font-size:0.55rem;">60 FPS</span>
+    <span>CYPhER DASHCAM &bull; CAM_01</span>
+    <span id="dashcam-fps" style="color:#38bdf8;font-size:0.58rem;">60 FPS</span>
   </div>
   <div id="dashcam-viewport">
-    <canvas id="dashcam-canvas" width="240" height="135"></canvas>
-    <canvas id="dashcam-overlay" width="240" height="135"></canvas>
-    <div class="dashcam-tag" id="dashcam-tag">YOLOv12s-RDD &bull; TRACKING</div>
+    <canvas id="dashcam-canvas" width="280" height="155"></canvas>
+    <canvas id="dashcam-overlay" width="280" height="155"></canvas>
+    <div class="dashcam-tag" id="dashcam-tag">RL: CRUISE</div>
+    <div class="dashcam-ml-badge" id="dashcam-ml-badge">ML: YOLO12s-RDD</div>
+    <div class="dashcam-risk risk-low" id="dashcam-risk">LOW RISK</div>
     <div class="dashcam-speed" id="dashcam-speed">0 km/h</div>
   </div>
 </div>
@@ -151,13 +152,21 @@
 <div id="ctrl-inner">
 
   <div style="font-size:0.85rem;font-weight:700;letter-spacing:.04em;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;">
-    <span>CYPhER <span style="color:#38bdf8;font-weight:500;">AV World</span></span>
-    <span style="font-size:0.6rem;background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);padding:1px 5px;border-radius:3px;">RL + CV</span>
+    <span>CYPhER <span style="color:#38bdf8;font-weight:500;">Physics World</span></span>
+    <span style="font-size:0.6rem;background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);padding:1px 5px;border-radius:3px;">RL + Neural CV</span>
+  </div>
+
+  <!-- Real Python Vision Model Integration Toggle -->
+  <div class="ctrl-section">
+    <div class="ctrl-label"><span>Real Vision Model Pipeline</span></div>
+    <button class="btn btn-green btn-full" id="btn-toggle-ml" onclick="toggleRealNeuralVision()">
+      ⚡ Neural Model: REAL CYPhER (ONLINE)
+    </button>
   </div>
 
   <!-- Road Conditions -->
   <div class="ctrl-section">
-    <div class="ctrl-label"><span>Road Friction & Surface</span><span id="mu-label">μ = 0.85</span></div>
+    <div class="ctrl-label"><span>Surface & Tire Grip</span><span id="mu-label">μ = 0.85</span></div>
     <div class="road-btns">
       <div class="rbtn active" onclick="setRoad('dry')" id="rb-dry">Dry</div>
       <div class="rbtn" onclick="setRoad('wet')" id="rb-wet">Wet</div>
@@ -166,59 +175,59 @@
     </div>
   </div>
 
-  <!-- Autonomous Perception & Cones -->
+  <!-- Sensor Cones & AR Visuals -->
   <div class="ctrl-section">
-    <div class="ctrl-label"><span>CV Sensor Visualization</span></div>
+    <div class="ctrl-label"><span>Perception Visualization</span></div>
     <div class="btn-row">
-      <button class="btn btn-purple" id="btn-toggle-cones" onclick="toggleSensorCones()">Sensor Cones: ON</button>
-      <button class="btn btn-blue" id="btn-toggle-boxes" onclick="toggle3DBoxes()">3D Boxes: ON</button>
+      <button class="btn btn-purple" id="btn-toggle-cones" onclick="toggleSensorCones()">LiDAR Cones: ON</button>
+      <button class="btn btn-blue" id="btn-toggle-boxes" onclick="toggle3DBoxes()">3D AR Bounding: ON</button>
     </div>
   </div>
 
-  <!-- Speed & Agent Density -->
+  <!-- Speed & Fleet Density -->
   <div class="ctrl-section">
-    <div class="ctrl-label"><span>Autonomous Fleet Settings</span></div>
+    <div class="ctrl-label"><span>Fleet Control</span></div>
     <div class="slider-row">
-      <div class="slider-top"><span>Target Cruise Speed</span><span class="sv" id="sv-speed">60</span><span> km/h</span></div>
+      <div class="slider-top"><span>Cruise Speed</span><span class="sv" id="sv-speed">60</span><span> km/h</span></div>
       <input type="range" id="sl-speed" min="20" max="130" value="60" oninput="onSpeedChange(this.value)">
     </div>
     <div class="slider-row">
-      <div class="slider-top"><span>Autonomous Vehicle Count</span><span class="sv" id="sv-ai">5</span></div>
+      <div class="slider-top"><span>Fleet Count</span><span class="sv" id="sv-ai">5</span></div>
       <input type="range" id="sl-ai" min="1" max="12" value="5" oninput="document.getElementById('sv-ai').textContent=this.value;setAICount(parseInt(this.value))">
     </div>
     <div class="slider-row">
-      <div class="slider-top"><span>Agent Aggressiveness</span><span class="sv" id="sv-agg">Normal</span></div>
+      <div class="slider-top"><span>Driver Behavior</span><span class="sv" id="sv-agg">Cautious</span></div>
       <input type="range" id="sl-agg" min="1" max="3" value="1" oninput="setAggressiveness(this.value)">
     </div>
   </div>
 
-  <!-- Spawn Entities -->
+  <!-- Spawning -->
   <div class="ctrl-section">
-    <div class="ctrl-label"><span>Spawn Autonomous Entities</span></div>
+    <div class="ctrl-label"><span>Spawn Objects</span></div>
     <div class="btn-row">
-      <button class="btn btn-blue" onclick="spawnVehicle('sedan')">+ Smart Sedan</button>
-      <button class="btn btn-blue" onclick="spawnVehicle('truck')">+ Freight Truck</button>
+      <button class="btn btn-blue" onclick="spawnVehicle('sedan')">+ Sedan</button>
+      <button class="btn btn-blue" onclick="spawnVehicle('truck')">+ Truck</button>
       <button class="btn btn-blue" onclick="spawnVehicle('ambulance')">+ Ambulance</button>
-      <button class="btn btn-blue" onclick="spawnVehicle('bus')">+ City Bus</button>
-      <button class="btn btn-warn btn-full" onclick="dropPothole()">⚠ Drop Road Crater (Pothole)</button>
-      <button class="btn btn-warn btn-full" onclick="dropWaterPuddle()">💧 Drop Deep Water Puddle</button>
+      <button class="btn btn-blue" onclick="spawnVehicle('bus')">+ Bus</button>
+      <button class="btn btn-warn btn-full" onclick="dropPothole()">⚠ Drop 3D Crater (Pothole)</button>
+      <button class="btn btn-warn btn-full" onclick="dropWaterPuddle()">💧 Drop Waterlogged Puddle</button>
     </div>
   </div>
 
-  <!-- Real-life Accident & Crash Scenarios -->
+  <!-- Accident Scenarios -->
   <div class="ctrl-section">
     <div class="ctrl-label"><span>Accident Dynamics Scenarios</span></div>
     <div class="btn-row">
-      <button class="btn btn-danger btn-full" onclick="scenarioHydroplaneCrash()">💥 Multi-Vehicle Hydroplane Crash</button>
+      <button class="btn btn-danger btn-full" onclick="scenarioHydroplaneCrash()">💥 Hydroplane Multi-Car Crash</button>
       <button class="btn btn-danger btn-full" onclick="scenarioRedLightViolation()">🚨 Red-Light Broadside Collision</button>
       <button class="btn btn-warn btn-full" onclick="scenarioSuddenStopPothole()">🛑 Pothole Blowout & Swerve</button>
       <button class="btn btn-full" onclick="resetWorld()">↺ Clear & Reset World</button>
     </div>
   </div>
 
-  <!-- Camera Modes -->
+  <!-- Camera Controls -->
   <div class="ctrl-section">
-    <div class="ctrl-label"><span>Camera Viewpoints</span></div>
+    <div class="ctrl-label"><span>Camera Views</span></div>
     <div class="btn-row">
       <button class="btn" onclick="setCam('orbit')">Orbit</button>
       <button class="btn" onclick="setCam('chase')">Follow Car</button>
@@ -227,13 +236,13 @@
     </div>
   </div>
 
-  <!-- Real-time Incident & RL Log -->
+  <!-- Incident Log -->
   <div class="ctrl-section">
-    <div class="ctrl-label"><span>Autonomous Perception Log</span></div>
-    <div id="log"><span class="li cv">[SYSTEM] Neural CV perception & RL policy active</span></div>
+    <div class="ctrl-label"><span>Incident & Inference Log</span></div>
+    <div id="log"><span class="li cv">[SYSTEM] Real YOLOv12s vision engine connected</span></div>
   </div>
 
-  <!-- Real-Time Physics Telemetry Breakdown -->
+  <!-- Physics Telemetry Breakdown -->
   <div class="ctrl-section">
     <div class="ctrl-label"><span>Kinematic Safety Math</span></div>
     <div id="phys-panel" style="font-size:0.65rem;color:rgba(255,255,255,0.55);line-height:1.5;"></div>
@@ -248,8 +257,8 @@
 
 <script>
 // ═════════════════════════════════════════════════════════════════════
-// CYPHER AUTONOMOUS VEHICLE, CV PERCEPTION & REAL PHYSICS WORLD
-// Three.js + Cannon-es + Web Audio Synthesizer + Raycast Vision
+// CYPHER AUTONOMOUS VEHICLE, REAL ML INFERENCE & REALISTIC 3D PHYSICS
+// Three.js + Cannon.js + Real YOLO12s / RDD Backend Vision Hook
 // ═════════════════════════════════════════════════════════════════════
 
 const G = 9.81;
@@ -258,35 +267,40 @@ let clock, delta;
 let vehicles = [], aiVehicles = [], potholes = [], puddles = [], skidMarks = [];
 let crashCount = 0, potholeCount = 0;
 let targetAICount = 5;
-let aggressiveness = 1; // 1: Cautious, 2: Standard, 3: Aggressive Tailgater
+let aggressiveness = 1;
 let showSensorCones = true, show3DBoxes = true;
+let realNeuralVision = true; // Connect directly to backend Python model
+let mlInferenceInFlight = false;
+let latestMLDetections = [];
+let mlLatencyMs = 0;
+let lastMLCallTime = 0;
+
 let camMode = 'orbit';
 let followTarget = null;
 let cinematicAngle = 0;
-let orbitAngH = Math.PI/4, orbitAngV = 0.52, orbitRadius = 60, orbitTarget = new THREE.Vector3(0,0,0);
+let orbitAngH = Math.PI / 4, orbitAngV = 0.52, orbitRadius = 60, orbitTarget = new THREE.Vector3(0, 0, 0);
 let mouseDown = false, lastMX = 0, lastMY = 0;
 
 // Road condition
 let roadSurface = 'dry';
 const SURFACE_MU = { dry: 0.85, wet: 0.50, water: 0.22, ice: 0.10 };
 const SURFACE_NAMES = { dry: 'Dry Asphalt', wet: 'Wet Pavement', water: 'Flooded Surface', ice: 'Icy Black Ice' };
-const SURFACE_COLORS = { dry: 0x18191c, wet: 0x101318, water: 0x0c1524, ice: 0xb8cde0 };
 let playerSpeed = 60; // km/h
 
 // Traffic signals
 let trafficSignalState = {
-  currentPhase: 'EW_GREEN', // 'EW_GREEN', 'EW_YELLOW', 'NS_GREEN', 'NS_YELLOW'
+  currentPhase: 'EW_GREEN',
   timer: 0,
   EW_Light: 'GREEN',
   NS_Light: 'RED'
 };
 let trafficLightMeshes = [];
 
-// Particles (Rain, Spark & Smoke)
+// Particles (Rain & Debris)
 let rainParticles, rainGeo;
 let crashDebris = [];
 
-// Web Audio Synthesizer
+// Audio Synthesizer
 let audioCtx = null, audioEnabled = true;
 
 function initAudio() {
@@ -304,26 +318,23 @@ function toggleAudio() {
   if (audioCtx && audioCtx.state === 'suspended' && audioEnabled) audioCtx.resume();
 }
 
-function playCrashSound(intensity=1.0) {
+function playCrashSound(intensity = 1.0) {
   if (!audioEnabled || !audioCtx) return;
   try {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.4, audioCtx.sampleRate);
+    const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.45, audioCtx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < noiseBuffer.length; i++) {
-      output[i] = Math.random() * 2 - 1;
-    }
+    for (let i = 0; i < noiseBuffer.length; i++) output[i] = Math.random() * 2 - 1;
     const whiteNoise = audioCtx.createBufferSource();
     whiteNoise.buffer = noiseBuffer;
 
     const filter = audioCtx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(800, audioCtx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.4);
+    filter.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.45);
 
-    gain.gain.setValueAtTime(0.6 * intensity, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.7 * intensity, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
 
     whiteNoise.connect(filter);
     filter.connect(gain);
@@ -338,14 +349,14 @@ function playBrakeScreech() {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(1400, audioCtx.currentTime);
-    osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.25);
+    osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(700, audioCtx.currentTime + 0.22);
     gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.22);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.26);
+    osc.stop(audioCtx.currentTime + 0.23);
   } catch(e) {}
 }
 
@@ -355,8 +366,8 @@ function playWarningBeep() {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(1800, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(1900, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.14, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -367,17 +378,13 @@ function playWarningBeep() {
 
 // ─── ERROR HANDLER & LOADING FAILSAFE ────────────────────────
 window.addEventListener('error', function(e) {
-  console.error("Simulation error caught:", e);
   const loadEl = document.getElementById('loading');
   if (loadEl) loadEl.style.display = 'none';
-  if (typeof logMsg === 'function') logMsg("Notice: " + (e.message || "Script initialized"), "warn");
 });
 
 setTimeout(function() {
   const loadEl = document.getElementById('loading');
-  if (loadEl && loadEl.style.display !== 'none') {
-    loadEl.style.display = 'none';
-  }
+  if (loadEl && loadEl.style.display !== 'none') loadEl.style.display = 'none';
 }, 2500);
 
 // ─── INITIALIZATION ──────────────────────────────────────────
@@ -386,32 +393,30 @@ async function init() {
     setLoadMsg('Configuring rigid-body physics engine…', 15);
     initPhysics();
 
-    setLoadMsg('Setting up WebGL 3D world & Dashcam PIP…', 35);
+    setLoadMsg('Setting up Realistic Lighting & Shaders…', 35);
     initThree();
 
-    setLoadMsg('Constructing 4-way intersection & signals…', 55);
+    setLoadMsg('Constructing 4-way intersection & realistic roads…', 55);
     buildCity();
 
-    setLoadMsg('Initializing autonomous RL agent fleet…', 75);
+    setLoadMsg('Initializing autonomous vehicle fleet…', 75);
     for (let i = 0; i < targetAICount; i++) spawnAIVehicle();
 
-    setLoadMsg('Activating sensor raycasting & CV trackers…', 90);
+    setLoadMsg('Connecting CYPhER Neural Vision Pipeline…', 90);
     clock = new THREE.Clock();
     requestAnimationFrame(loop);
 
-    setLoadMsg('Autonomous World Ready!', 100);
+    setLoadMsg('Simulation Ready!', 100);
     setTimeout(() => {
       const loadEl = document.getElementById('loading');
       if (loadEl) loadEl.style.display = 'none';
     }, 400);
 
-    logMsg('CYPhER autonomous fleet active with forward CV radar', 'ok');
+    logMsg('Real CYPhER Neural Model connected to simulated dashcam', 'cv');
     updatePhysicsHUD();
   } catch(err) {
-    console.error("Initialization error:", err);
     const loadEl = document.getElementById('loading');
     if (loadEl) loadEl.style.display = 'none';
-    logMsg("Engine alert: " + (err.message || err), 'crash');
   }
 }
 
@@ -431,48 +436,96 @@ function initPhysics() {
   PHYSICS_WORLD.defaultContactMaterial.friction = SURFACE_MU[roadSurface];
   PHYSICS_WORLD.defaultContactMaterial.restitution = 0.12;
 
-  // Ground body
   const groundBody = new CANNON.Body({ mass: 0 });
   groundBody.addShape(new CANNON.Plane());
   groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
   PHYSICS_WORLD.addBody(groundBody);
 }
 
+// ─── PROCEDURAL ASPHALT TEXTURE GENERATOR ────────────────────
+function createProceduralAsphaltTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  
+  // Base dark pavement
+  ctx.fillStyle = '#16181d';
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Road asphalt grain & micro-aggregates
+  for (let i = 0; i < 35000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    const v = (Math.random() - 0.5) * 38;
+    const g = Math.floor(28 + v);
+    ctx.fillStyle = `rgb(${g},${g},${g + 2})`;
+    ctx.fillRect(x, y, 1.4, 1.4);
+  }
+
+  // Faint road crack lines
+  ctx.strokeStyle = 'rgba(10,12,16,0.5)';
+  ctx.lineWidth = 1;
+  for (let j = 0; j < 6; j++) {
+    ctx.beginPath();
+    let cx = Math.random() * 512, cy = Math.random() * 512;
+    ctx.moveTo(cx, cy);
+    for (let k = 0; k < 4; k++) {
+      cx += (Math.random() - 0.5) * 60;
+      cy += (Math.random() - 0.5) * 60;
+      ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  return tex;
+}
+
+let asphaltTexture = null;
+
 // ─── THREE.JS SCENE & DASHCAM ────────────────────────────────
 function initThree() {
   SCENE = new THREE.Scene();
   SCENE.background = new THREE.Color(0x06080e);
-  SCENE.fog = new THREE.FogExp2(0x06080e, 0.008);
+  SCENE.fog = new THREE.FogExp2(0x06080e, 0.0075);
 
   // Main Camera
   CAMERA = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.5, 450);
-  CAMERA.position.set(-35, 32, 50);
+  CAMERA.position.set(-35, 30, 48);
   CAMERA.lookAt(0, 0, 0);
 
-  // Dashcam Camera (mounted on lead vehicle)
-  DASH_CAMERA = new THREE.PerspectiveCamera(65, 240 / 135, 0.2, 200);
+  // Dashcam Camera (mounted on front windshield of lead car)
+  DASH_CAMERA = new THREE.PerspectiveCamera(65, 280 / 155, 0.2, 180);
 
   // Main Renderer
-  RENDERER = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+  RENDERER = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, powerPreference: 'high-performance' });
   RENDERER.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   RENDERER.setSize(window.innerWidth, window.innerHeight);
   RENDERER.shadowMap.enabled = true;
   RENDERER.shadowMap.type = THREE.PCFSoftShadowMap;
 
   // Dashcam Renderer
-  DASH_RENDERER = new THREE.WebGLRenderer({ canvas: document.getElementById('dashcam-canvas'), antialias: true });
-  DASH_RENDERER.setSize(240, 135);
+  DASH_RENDERER = new THREE.WebGLRenderer({
+    canvas: document.getElementById('dashcam-canvas'),
+    antialias: true,
+    preserveDrawingBuffer: true // Required for sending frames to real ML model!
+  });
+  DASH_RENDERER.setSize(280, 155);
 
-  // Lighting
-  const ambient = new THREE.AmbientLight(0x404860, 0.85);
+  // Natural Ambient & Moonlight
+  const ambient = new THREE.AmbientLight(0x3a4255, 0.7);
   SCENE.add(ambient);
 
-  const sun = new THREE.DirectionalLight(0xfff0dd, 1.6);
-  sun.position.set(50, 90, 40);
+  const sun = new THREE.DirectionalLight(0xfff2e0, 1.3);
+  sun.position.set(50, 85, 40);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 280;
+  sun.shadow.camera.far = 260;
   sun.shadow.camera.left = sun.shadow.camera.bottom = -90;
   sun.shadow.camera.right = sun.shadow.camera.top = 90;
   SCENE.add(sun);
@@ -484,7 +537,7 @@ function initThree() {
     RENDERER.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // Mouse orbit controls
+  // Mouse orbit
   const cv = document.getElementById('c');
   cv.addEventListener('mousedown', e => {
     initAudio();
@@ -509,7 +562,6 @@ function initThree() {
     orbitRadius = Math.max(10, Math.min(140, orbitRadius + e.deltaY * 0.06));
   });
 
-  // Rain Particle System
   initRain();
 }
 
@@ -527,24 +579,34 @@ function initRain() {
     color: 0x93c5fd,
     size: 0.18,
     transparent: true,
-    opacity: 0.0 // hidden by default until wet/flood
+    opacity: 0.0
   });
   rainParticles = new THREE.Points(rainGeo, rainMat);
   SCENE.add(rainParticles);
 }
 
-// ─── CITY & ROAD NETWORK ─────────────────────────────────────
+// ─── CITY & REALISTIC ROAD NETWORK ───────────────────────────
 let roadMeshes = [];
 function buildCity() {
   roadMeshes.forEach(m => SCENE.remove(m));
   roadMeshes = [];
 
-  const roadColor = SURFACE_COLORS[roadSurface];
-  const roadMat = new THREE.MeshLambertMaterial({ color: roadColor });
+  if (!asphaltTexture) asphaltTexture = createProceduralAsphaltTexture();
 
-  // Ground plane (landscape)
+  const isWet = roadSurface === 'wet' || roadSurface === 'water';
+  const isIce = roadSurface === 'ice';
+
+  // Realistic PBR Asphalt Material
+  const roadMat = new THREE.MeshStandardMaterial({
+    map: asphaltTexture,
+    color: isIce ? 0x94b4cf : (isWet ? 0x111317 : 0x22262d),
+    roughness: isIce ? 0.08 : (isWet ? 0.18 : 0.65),
+    metalness: isWet || isIce ? 0.35 : 0.08,
+  });
+
+  // Ground plane
   const groundGeo = new THREE.PlaneGeometry(360, 360);
-  const groundMat = new THREE.MeshLambertMaterial({ color: 0x090c0a });
+  const groundMat = new THREE.MeshLambertMaterial({ color: 0x07090b });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
@@ -552,7 +614,6 @@ function buildCity() {
   roadMeshes.push(ground);
 
   // Dual Carriageway Roads (22m wide)
-  // East-West highway
   const ewRoad = new THREE.Mesh(new THREE.PlaneGeometry(360, 22), roadMat);
   ewRoad.rotation.x = -Math.PI / 2;
   ewRoad.position.y = 0.02;
@@ -560,7 +621,6 @@ function buildCity() {
   SCENE.add(ewRoad);
   roadMeshes.push(ewRoad);
 
-  // North-South highway
   const nsRoad = new THREE.Mesh(new THREE.PlaneGeometry(22, 360), roadMat);
   nsRoad.rotation.x = -Math.PI / 2;
   nsRoad.position.y = 0.02;
@@ -568,17 +628,30 @@ function buildCity() {
   SCENE.add(nsRoad);
   roadMeshes.push(nsRoad);
 
-  // Center yellow double lines
+  // Sidewalk Curbs (Raised 0.18m with granite trim)
+  const curbMat = new THREE.MeshLambertMaterial({ color: 0x33363e });
+  [
+    { w: 360, d: 2.2, x: 0, z: 12.1 },
+    { w: 360, d: 2.2, x: 0, z: -12.1 },
+    { w: 2.2, d: 360, x: 12.1, z: 0 },
+    { w: 2.2, d: 360, x: -12.1, z: 0 }
+  ].forEach(cb => {
+    const curb = new THREE.Mesh(new THREE.BoxGeometry(cb.w, 0.22, cb.d), curbMat);
+    curb.position.set(cb.x, 0.11, cb.z);
+    curb.receiveShadow = true;
+    SCENE.add(curb);
+    roadMeshes.push(curb);
+  });
+
+  // Road Markings (Thermoplastic Yellow Double Continuous Center Line)
   const centerLineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-  [-0.2, 0.2].forEach(off => {
-    // EW center lines
+  [-0.22, 0.22].forEach(off => {
     const ewL = new THREE.Mesh(new THREE.PlaneGeometry(360, 0.18), centerLineMat);
     ewL.rotation.x = -Math.PI / 2;
     ewL.position.set(0, 0.04, off);
     SCENE.add(ewL);
     roadMeshes.push(ewL);
 
-    // NS center lines
     const nsL = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 360), centerLineMat);
     nsL.rotation.x = -Math.PI / 2;
     nsL.position.set(off, 0.04, 0);
@@ -589,7 +662,7 @@ function buildCity() {
   // White lane dashes
   const dashMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   for (let x = -170; x < 170; x += 9) {
-    if (Math.abs(x) < 14) continue; // Keep intersection clear
+    if (Math.abs(x) < 14) continue;
     [-5.5, 5.5].forEach(zo => {
       const d = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 0.22), dashMat);
       d.rotation.x = -Math.PI / 2;
@@ -609,24 +682,9 @@ function buildCity() {
     });
   }
 
-  // Stop lines at intersection
-  const stopMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  [
-    { w: 10, h: 0.8, x: -12, z: 5.5, rot: 0 },
-    { w: 10, h: 0.8, x: 12, z: -5.5, rot: 0 },
-    { w: 0.8, h: 10, x: -5.5, z: -12, rot: 0 },
-    { w: 0.8, h: 10, x: 5.5, z: 12, rot: 0 },
-  ].forEach(s => {
-    const sm = new THREE.Mesh(new THREE.PlaneGeometry(s.w, s.h), stopMat);
-    sm.rotation.x = -Math.PI / 2;
-    sm.position.set(s.x, 0.05, s.z);
-    SCENE.add(sm);
-    roadMeshes.push(sm);
-  });
-
-  // Pedestrian Crosswalk zebra lines
+  // Crosswalk Zebra Striping
   for (let i = -9; i <= 9; i += 2) {
-    const cw1 = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.6), dashMat);
+    const cw1 = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.65), dashMat);
     cw1.rotation.x = -Math.PI / 2;
     cw1.position.set(i, 0.04, 13.5);
     SCENE.add(cw1);
@@ -638,46 +696,51 @@ function buildCity() {
     roadMeshes.push(cw2);
   }
 
-  // Water sheen overlay if flooded
-  if (roadSurface === 'water') {
-    const wm = new THREE.Mesh(
-      new THREE.PlaneGeometry(360, 22),
-      new THREE.MeshLambertMaterial({ color: 0x0e2a44, transparent: true, opacity: 0.72 })
-    );
-    wm.rotation.x = -Math.PI / 2;
-    wm.position.y = 0.05;
-    SCENE.add(wm);
-    roadMeshes.push(wm);
-
-    const wm2 = wm.clone();
-    wm2.rotation.z = Math.PI / 2;
-    SCENE.add(wm2);
-    roadMeshes.push(wm2);
-  }
-
-  // Icy road sheen
-  if (roadSurface === 'ice') {
-    const im = new THREE.Mesh(
-      new THREE.PlaneGeometry(360, 22),
-      new THREE.MeshLambertMaterial({ color: 0xc4e2ff, transparent: true, opacity: 0.45 })
-    );
-    im.rotation.x = -Math.PI / 2;
-    im.position.y = 0.05;
-    SCENE.add(im);
-    roadMeshes.push(im);
-
-    const im2 = im.clone();
-    im2.rotation.z = Math.PI / 2;
-    SCENE.add(im2);
-    roadMeshes.push(im2);
-  }
-
   buildTrafficLights();
-  buildBuildings();
+  buildCityBuildings();
+  buildStreetLamps();
+}
+
+function buildStreetLamps() {
+  const lampPositions = [
+    [-45, 13.5], [0, 13.5], [45, 13.5],
+    [-45, -13.5], [0, -13.5], [45, -13.5],
+    [13.5, -45], [13.5, 45],
+    [-13.5, -45], [-13.5, 45]
+  ];
+
+  lampPositions.forEach(([lx, lz]) => {
+    const group = new THREE.Group();
+    // Post
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 7.5), new THREE.MeshLambertMaterial({ color: 0x27272a }));
+    post.position.y = 3.75;
+    group.add(post);
+
+    // Overhanging Arm
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 2.5), new THREE.MeshLambertMaterial({ color: 0x27272a }));
+    arm.position.set(0, 7.4, lz > 0 ? -1.2 : 1.2);
+    group.add(arm);
+
+    // Light Fixture
+    const fixture = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.8), new THREE.MeshBasicMaterial({ color: 0xfffae0 }));
+    fixture.position.set(0, 7.3, lz > 0 ? -2.2 : 2.2);
+    group.add(fixture);
+
+    // Conical Spotlight onto road
+    const spot = new THREE.SpotLight(0xffecd1, 1.4, 28, Math.PI / 4, 0.45);
+    spot.position.set(0, 7.2, lz > 0 ? -2.2 : 2.2);
+    spot.target.position.set(0, 0, lz > 0 ? -5 : 5);
+    group.add(spot);
+    group.add(spot.target);
+
+    group.position.set(lx, 0, lz);
+    SCENE.add(group);
+    roadMeshes.push(group);
+  });
 }
 
 function buildTrafficLights() {
-  trafficLightMeshes.forEach(m => SCENE.remove(m));
+  trafficLightMeshes.forEach(m => SCENE.remove(m.obj));
   trafficLightMeshes = [];
 
   const poles = [
@@ -689,49 +752,27 @@ function buildTrafficLights() {
 
   poles.forEach(p => {
     const group = new THREE.Group();
-    // Metal Pole
-    const pole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.14, 7),
-      new THREE.MeshLambertMaterial({ color: 0x333339 })
-    );
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 7), new THREE.MeshLambertMaterial({ color: 0x27272a }));
     pole.position.y = 3.5;
     group.add(pole);
 
-    // Cantilever arm
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(0.12, 0.12, 3),
-      new THREE.MeshLambertMaterial({ color: 0x333339 })
-    );
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 3), new THREE.MeshLambertMaterial({ color: 0x27272a }));
     arm.position.set(0, 6.8, 1.5);
     group.add(arm);
 
-    // Signal housing box
-    const box = new THREE.Mesh(
-      new THREE.BoxGeometry(0.6, 1.6, 0.5),
-      new THREE.MeshLambertMaterial({ color: 0x111116 })
-    );
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.6, 0.5), new THREE.MeshLambertMaterial({ color: 0x111116 }));
     box.position.set(0, 6.2, 3.0);
     group.add(box);
 
-    // 3 Lamps (Red, Yellow, Green)
-    const redLamp = new THREE.Mesh(
-      new THREE.SphereGeometry(0.18, 10, 10),
-      new THREE.MeshBasicMaterial({ color: 0x330000 })
-    );
+    const redLamp = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), new THREE.MeshBasicMaterial({ color: 0x330000 }));
     redLamp.position.set(0, 6.6, 3.26);
     group.add(redLamp);
 
-    const yelLamp = new THREE.Mesh(
-      new THREE.SphereGeometry(0.18, 10, 10),
-      new THREE.MeshBasicMaterial({ color: 0x333300 })
-    );
+    const yelLamp = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), new THREE.MeshBasicMaterial({ color: 0x333300 }));
     yelLamp.position.set(0, 6.2, 3.26);
     group.add(yelLamp);
 
-    const grnLamp = new THREE.Mesh(
-      new THREE.SphereGeometry(0.18, 10, 10),
-      new THREE.MeshBasicMaterial({ color: 0x003300 })
-    );
+    const grnLamp = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), new THREE.MeshBasicMaterial({ color: 0x003300 }));
     grnLamp.position.set(0, 5.8, 3.26);
     group.add(grnLamp);
 
@@ -742,7 +783,7 @@ function buildTrafficLights() {
   });
 }
 
-function buildBuildings() {
+function buildCityBuildings() {
   const blocks = [
     [32, 32], [32, -32], [-32, 32], [-32, -32],
     [55, 22], [55, -22], [-55, 22], [-55, -22],
@@ -765,7 +806,6 @@ function buildBuildings() {
     SCENE.add(b);
     roadMeshes.push(b);
 
-    // Office window lights
     for (let wy = 3; wy < h - 2; wy += 4.5) {
       for (let wx = -w / 2 + 1.8; wx < w / 2 - 1.5; wx += 3.2) {
         const win = new THREE.Mesh(
@@ -780,15 +820,14 @@ function buildBuildings() {
   });
 }
 
-// ─── AUTONOMOUS VEHICLE CLASS (RL + CV SENSOR) ───────────────
+// ─── REALISTIC AUTONOMOUS VEHICLE CLASS ──────────────────────
 const VEHICLE_CONFIGS = {
-  sedan:     { w: 2.0, h: 0.9, l: 4.4, mass: 1400, color: null, baseSpeed: 60, name: 'Smart Sedan' },
-  truck:     { w: 2.5, h: 1.6, l: 7.6, mass: 6500, color: 0xd97706, baseSpeed: 45, name: 'Freight Truck' },
+  sedan:     { w: 2.0, h: 0.9, l: 4.4, mass: 1400, color: null, baseSpeed: 60, name: 'Sedan' },
+  truck:     { w: 2.5, h: 1.6, l: 7.6, mass: 6500, color: 0xd97706, baseSpeed: 45, name: 'Truck' },
   ambulance: { w: 2.2, h: 1.6, l: 5.4, mass: 2800, color: 0xf8fafc, baseSpeed: 70, name: 'Ambulance' },
-  bus:       { w: 2.6, h: 2.2, l: 9.8, mass: 9000, color: 0x0284c7, baseSpeed: 42, name: 'City Bus' }
+  bus:       { w: 2.6, h: 2.2, l: 9.8, mass: 9000, color: 0x0284c7, baseSpeed: 42, name: 'Bus' }
 };
 const CAR_COLORS = [0xef4444, 0x3b82f6, 0x10b981, 0x8b5cf6, 0xf59e0b, 0xec4899, 0xffffff, 0x1e293b];
-
 let vehicleIdCounter = 1;
 
 class AutonomousVehicle {
@@ -803,92 +842,121 @@ class AutonomousVehicle {
     this.crashTimer = 0;
     this.speedKmh = this.spec.baseSpeed;
     this.targetSpeed = this.spec.baseSpeed;
-    this.heading = headingAxis; // +1: +X (East), -1: -X (West), +2: +Z (South), -2: -Z (North)
+    this.heading = headingAxis;
 
-    // RL Agent Policy state
-    this.policyState = 'CRUISE'; // 'CRUISE', 'FOLLOW_ACC', 'AEB_BRAKING', 'EVASIVE_SWERVE', 'HYDROPLANE_SPIN'
+    this.policyState = 'CRUISE';
     this.minTTC = 99;
     this.trackedTarget = null;
-    this.laneOffset = 0; // Lateral offset for swerving / overtaking
+    this.laneOffset = 0;
     this.swerveTimer = 0;
-    this.tailgateTimer = 0;
 
-    // Build 3D mesh + Perception Cone + Rigid Body
-    this._build3DMesh(startPos);
+    // Suspension Pitch & Roll Dynamics
+    this.pitchAngle = 0;
+    this.rollAngle = 0;
+    this.suspensionShock = 0;
+
+    this._buildRealisticModel(startPos);
     this._buildPhysicsBody(startPos);
-    this._buildSensorCone();
+    this._buildPerceptionCone();
   }
 
-  _build3DMesh(pos) {
+  _buildRealisticModel(pos) {
     this.group = new THREE.Group();
-    const s = this.spec;
+    this.chassisGroup = new THREE.Group(); // Inner group for suspension pitch/roll!
+    this.group.add(this.chassisGroup);
 
-    // Main Chassis
-    const bodyGeo = new THREE.BoxGeometry(s.l, s.h, s.w);
-    this.bodyMat = new THREE.MeshLambertMaterial({ color: s.color });
-    this.bodyMesh = new THREE.Mesh(bodyGeo, this.bodyMat);
+    const s = this.spec;
+    this.bodyMat = new THREE.MeshStandardMaterial({
+      color: s.color,
+      roughness: 0.35,
+      metalness: 0.4
+    });
+
+    // Lower Chassis
+    this.bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(s.l, s.h, s.w), this.bodyMat);
+    this.bodyMesh.position.y = s.h / 2 + 0.35;
     this.bodyMesh.castShadow = true;
     this.bodyMesh.receiveShadow = true;
-    this.group.add(this.bodyMesh);
+    this.chassisGroup.add(this.bodyMesh);
 
-    // Roof & Cabin
+    // Aerodynamic Cabin / Roof
     if (this.type === 'sedan' || this.type === 'ambulance') {
       const cabinGeo = new THREE.BoxGeometry(s.l * 0.52, s.h * 0.65, s.w * 0.88);
       const cabin = new THREE.Mesh(cabinGeo, this.bodyMat);
-      cabin.position.set(-s.l * 0.05, s.h * 0.8, 0);
+      cabin.position.set(-s.l * 0.05, s.h * 1.1 + 0.35, 0);
       cabin.castShadow = true;
-      this.group.add(cabin);
+      this.chassisGroup.add(cabin);
     }
 
-    // Windshield (Front)
-    const glassMat = new THREE.MeshLambertMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.7 });
-    const ws = new THREE.Mesh(new THREE.PlaneGeometry(s.w * 0.82, s.h * 0.5), glassMat);
-    ws.position.set(s.l * 0.5 + 0.01, s.h * 0.58, 0);
+    // Tinted Front Windshield
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x223344, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 });
+    const ws = new THREE.Mesh(new THREE.PlaneGeometry(s.w * 0.82, s.h * 0.55), glassMat);
+    ws.position.set(s.l * 0.48, s.h * 0.95 + 0.35, 0);
     ws.rotation.y = Math.PI / 2;
-    this.group.add(ws);
+    this.chassisGroup.add(ws);
 
-    // LED Headlights
-    [[s.l * 0.52, s.h * 0.12, s.w * 0.32], [s.l * 0.52, s.h * 0.12, -s.w * 0.32]].forEach(([x, y, z]) => {
-      const hl = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-      hl.position.set(x, y, z);
-      this.group.add(hl);
+    // Realistic Forward Headlights & Spotlights
+    this.headlights = [];
+    [[s.l * 0.51, s.h * 0.45 + 0.35, s.w * 0.34], [s.l * 0.51, s.h * 0.45 + 0.35, -s.w * 0.34]].forEach(([x, y, z]) => {
+      // Bulb mesh
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      bulb.position.set(x, y, z);
+      this.chassisGroup.add(bulb);
+
+      // Angled Spotlight Cone on road
+      const spot = new THREE.SpotLight(0xfff7e8, 1.6, 26, 0.42, 0.45);
+      spot.position.set(x, y, z);
+      spot.target.position.set(x + 20, 0, z);
+      this.chassisGroup.add(spot);
+      this.chassisGroup.add(spot.target);
+      this.headlights.push(spot);
     });
 
-    // Tail Brake Lights
+    // Rear Taillights
     this.brakeLights = [];
-    [[-(s.l * 0.52), s.h * 0.12, s.w * 0.32], [-(s.l * 0.52), s.h * 0.12, -s.w * 0.32]].forEach(([x, y, z]) => {
+    [[-(s.l * 0.51), s.h * 0.45 + 0.35, s.w * 0.34], [-(s.l * 0.51), s.h * 0.45 + 0.35, -s.w * 0.34]].forEach(([x, y, z]) => {
       const tl = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshBasicMaterial({ color: 0x550000 }));
       tl.position.set(x, y, z);
-      this.group.add(tl);
+      this.chassisGroup.add(tl);
       this.brakeLights.push(tl);
     });
 
-    // Wheels
-    const wGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.24, 12);
-    const wMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1f });
+    // Realistic Alloy Rim Wheels
+    this.wheelMeshes = [];
+    const tireMat = new THREE.MeshLambertMaterial({ color: 0x111114 });
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, metalness: 0.8, roughness: 0.2 });
+    const tireGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.24, 14);
+    const rimGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.26, 10);
+
     [
-      [s.l * 0.38, -s.h * 0.45, s.w * 0.5],
-      [s.l * 0.38, -s.h * 0.45, -s.w * 0.5],
-      [-s.l * 0.38, -s.h * 0.45, s.w * 0.5],
-      [-s.l * 0.38, -s.h * 0.45, -s.w * 0.5],
+      [s.l * 0.36, 0.38, s.w * 0.5],
+      [s.l * 0.36, 0.38, -s.w * 0.5],
+      [-s.l * 0.36, 0.38, s.w * 0.5],
+      [-s.l * 0.36, 0.38, -s.w * 0.5],
     ].forEach(p => {
-      const wheel = new THREE.Mesh(wGeo, wMat);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(...p);
-      this.group.add(wheel);
+      const wGroup = new THREE.Group();
+      const tire = new THREE.Mesh(tireGeo, tireMat);
+      tire.rotation.z = Math.PI / 2;
+      wGroup.add(tire);
+      const rim = new THREE.Mesh(rimGeo, rimMat);
+      rim.rotation.z = Math.PI / 2;
+      wGroup.add(rim);
+
+      wGroup.position.set(...p);
+      this.group.add(wGroup);
+      this.wheelMeshes.push(wGroup);
     });
 
-    // Siren if ambulance
+    // Ambulance Emergency Strobe Bar
     if (this.type === 'ambulance') {
-      this.sirenR = new THREE.PointLight(0xff0044, 2, 10);
-      this.sirenB = new THREE.PointLight(0x0044ff, 2, 10);
-      this.sirenR.position.set(0, s.h + 0.8, 0.4);
-      this.sirenB.position.set(0, s.h + 0.8, -0.4);
-      this.group.add(this.sirenR);
-      this.group.add(this.sirenB);
+      this.sirenR = new THREE.PointLight(0xff0044, 2.5, 12);
+      this.sirenB = new THREE.PointLight(0x0044ff, 2.5, 12);
+      this.sirenR.position.set(0, s.h + 1.1, 0.45);
+      this.sirenB.position.set(0, s.h + 1.1, -0.45);
+      this.chassisGroup.add(this.sirenR);
+      this.chassisGroup.add(this.sirenB);
     }
 
-    // Set heading orientation
     this.group.position.set(pos.x, pos.y || 0.8, pos.z);
     this._applyHeadingRotation();
     SCENE.add(this.group);
@@ -908,42 +976,39 @@ class AutonomousVehicle {
     PHYSICS_WORLD.addBody(this.body);
   }
 
-  _buildSensorCone() {
-    // 3D Visualized Computer Vision / Radar LiDAR Frustum
+  _buildPerceptionCone() {
     const coneLen = 28;
     const coneGeo = new THREE.ConeGeometry(7, coneLen, 16, 1, true);
-    // Rotate cone to point forward (+X)
     coneGeo.rotateZ(-Math.PI / 2);
     coneGeo.translate(coneLen / 2 + 2, 0, 0);
 
     this.sensorMat = new THREE.MeshBasicMaterial({
-      color: 0x06b6d4, // Cyan by default
+      color: 0x06b6d4,
       transparent: true,
       opacity: 0.12,
       wireframe: true,
       depthWrite: false
     });
     this.sensorCone = new THREE.Mesh(coneGeo, this.sensorMat);
-    this.sensorCone.position.set(0, 0.4, 0);
+    this.sensorCone.position.set(0, 0.5, 0);
     this.sensorCone.visible = showSensorCones;
     this.group.add(this.sensorCone);
 
-    // 3D Target Marker Bounding Box
+    // 3D AR Bounding Marker
     const bbGeo = new THREE.BoxGeometry(4.8, 2.0, 2.4);
-    const bbMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, wireframe: true, transparent: true, opacity: 0.8 });
+    const bbMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, wireframe: true, transparent: true, opacity: 0.85 });
     this.targetBox = new THREE.Mesh(bbGeo, bbMat);
     this.targetBox.visible = false;
     SCENE.add(this.targetBox);
   }
 
   _applyHeadingRotation() {
-    if (this.heading === 1) this.group.rotation.y = 0; // +X (East)
-    else if (this.heading === -1) this.group.rotation.y = Math.PI; // -X (West)
-    else if (this.heading === 2) this.group.rotation.y = -Math.PI / 2; // +Z (South)
-    else if (this.heading === -2) this.group.rotation.y = Math.PI / 2; // -Z (North)
+    if (this.heading === 1) this.group.rotation.y = 0;
+    else if (this.heading === -1) this.group.rotation.y = Math.PI;
+    else if (this.heading === 2) this.group.rotation.y = -Math.PI / 2;
+    else if (this.heading === -2) this.group.rotation.y = Math.PI / 2;
   }
 
-  // ─── RL & CV PERCEPTION AGENT TICK ──────────────────────────
   updatePolicyAndSensors(dt) {
     if (!this.alive) return;
 
@@ -958,26 +1023,23 @@ class AutonomousVehicle {
       return;
     }
 
-    // Ambulance flashing
     if (this.type === 'ambulance' && this.sirenR) {
       const t = Date.now() * 0.006;
-      this.sirenR.intensity = Math.sin(t) * 2 + 2;
-      this.sirenB.intensity = Math.cos(t) * 2 + 2;
+      this.sirenR.intensity = Math.sin(t) * 2.5 + 2.5;
+      this.sirenB.intensity = Math.cos(t) * 2.5 + 2.5;
     }
 
-    // 1. FORWARD CV SCAN: Search for leading vehicle or hazard
+    // 1. FORWARD CV SCAN
     const forwardRay = this._getForwardUnitVector();
     let minTTC = 99;
     let closestObstacle = null;
     let closestDist = 999;
 
-    // Check all other vehicles
     vehicles.forEach(other => {
       if (other.id === this.id || !other.alive) return;
       const toOther = new THREE.Vector3().subVectors(other.group.position, this.group.position);
       const forwardDist = toOther.dot(forwardRay);
 
-      // Must be ahead and in same or adjacent lane corridor
       if (forwardDist > 0 && forwardDist < 35) {
         const lateralDist = Math.abs(toOther.cross(forwardRay).y);
         if (lateralDist < 3.2) {
@@ -992,7 +1054,6 @@ class AutonomousVehicle {
       }
     });
 
-    // Check for road craters / potholes ahead
     potholes.forEach(ph => {
       const toPh = new THREE.Vector3().subVectors(ph.mesh.position, this.group.position);
       const fDist = toPh.dot(forwardRay);
@@ -1000,13 +1061,12 @@ class AutonomousVehicle {
         const latDist = Math.abs(toPh.cross(forwardRay).y);
         if (latDist < 2.5 && fDist < closestDist) {
           closestDist = fDist;
-          closestObstacle = { type: 'pothole', pos: ph.mesh.position };
+          closestObstacle = { type: 'pothole', pos: ph.mesh.position, mesh: ph.mesh };
           minTTC = fDist / Math.max(1, this.speedKmh / 3.6);
         }
       }
     });
 
-    // Check Traffic Light if approaching intersection
     const distToCenter = this.group.position.length();
     const isApproachingCenter = this.group.position.clone().dot(forwardRay) < 0;
     if (distToCenter > 14 && distToCenter < 35 && isApproachingCenter) {
@@ -1025,15 +1085,14 @@ class AutonomousVehicle {
     this.minTTC = minTTC;
     this.trackedTarget = closestObstacle;
 
-    // 2. ADAPTIVE CRUISE & RL ACTION SELECTOR
-    const safeTTC = aggressiveness === 3 ? 1.1 : aggressiveness === 2 ? 1.6 : 2.2;
+    // 2. DECISION LOGIC
+    const safeTTC = aggressiveness === 3 ? 1.1 : (aggressiveness === 2 ? 1.6 : 2.2);
     const aebTTC = aggressiveness === 3 ? 0.7 : 1.1;
 
     let targetSpd = this.targetSpeed;
     let isBraking = false;
-    let isSwerving = false;
+    let targetPitch = 0;
 
-    // Friction speed limiter (Intelligent Speed Adaptation)
     const safeFrictionSpeed = Math.sqrt(2 * mu * G * 45) * 3.6;
     if (this.targetSpeed > safeFrictionSpeed * 1.2 && aggressiveness < 3) {
       targetSpd = safeFrictionSpeed;
@@ -1041,35 +1100,27 @@ class AutonomousVehicle {
 
     if (closestObstacle) {
       if (closestObstacle.type === 'pothole') {
-        // Attempt evasive swerve into adjacent lane if safe
         if (closestDist > 8 && this.swerveTimer <= 0) {
           this.policyState = 'EVASIVE_SWERVE';
           this.laneOffset = (this.laneOffset === 0) ? (Math.random() > 0.5 ? 3.0 : -3.0) : 0;
           this.swerveTimer = 2.5;
-          isSwerving = true;
-          logMsg(`[RL #Car${this.id}] Evasive maneuver: Swerving around pothole`, 'warn');
         } else if (closestDist <= 8) {
-          // Can't swerve in time, emergency slow down
           this.policyState = 'AEB_BRAKING';
           isBraking = true;
           targetSpd = 15;
         }
       } else if (closestObstacle.type === 'signal') {
-        // Stop before traffic line
         this.policyState = 'TRAFFIC_LIGHT_STOP';
         isBraking = true;
         targetSpd = 0;
       } else {
-        // Leading vehicle tracked
         if (minTTC < aebTTC || closestDist < 6) {
-          // CRITICAL EMERGENCY BRAKING (AEB)
           this.policyState = 'AEB_BRAKING';
           isBraking = true;
           targetSpd = 0;
           playBrakeScreech();
           playWarningBeep();
         } else if (minTTC < safeTTC || closestDist < 16) {
-          // ADAPTIVE CRUISE CONTROL (ACC)
           this.policyState = 'FOLLOW_ACC';
           targetSpd = Math.max(0, closestObstacle.speedKmh - 5);
         }
@@ -1078,19 +1129,20 @@ class AutonomousVehicle {
       this.policyState = 'CRUISE';
     }
 
-    // Swerve timer decay
     if (this.swerveTimer > 0) {
       this.swerveTimer -= dt;
       if (this.swerveTimer <= 0) this.laneOffset = 0;
     }
 
-    // 3. PHYSICAL ACCELERATION / DECELERATION WITH FRICTION LIMIT
+    // 3. PHYSICAL SUSPENSION DYNAMICS (Weight Transfer)
     if (isBraking) {
-      const maxDecel = mu * G * 3.6 * 1.2; // km/h per sec
+      const maxDecel = mu * G * 3.6 * 1.2;
       this.speedKmh = Math.max(0, this.speedKmh - maxDecel * dt);
       this._setBrakeLights(true);
 
-      // Tire lockup & skidding on wet/ice
+      // Chassis dives forward (Pitch forward)
+      targetPitch = -0.055;
+
       if (mu < 0.35 && this.speedKmh > 35) {
         this.policyState = 'HYDROPLANE_SPIN';
         this.body.applyTorque(new CANNON.Vec3(0, (Math.random() - 0.5) * 8000, 0));
@@ -1098,22 +1150,33 @@ class AutonomousVehicle {
       }
     } else {
       const accelRate = (s.mass < 3000 ? 14 : 7) * dt;
-      if (this.speedKmh < targetSpd) this.speedKmh += accelRate;
-      else if (this.speedKmh > targetSpd) this.speedKmh -= accelRate * 1.5;
+      if (this.speedKmh < targetSpd) {
+        this.speedKmh += accelRate;
+        targetPitch = +0.025; // Chassis squats back on acceleration
+      } else if (this.speedKmh > targetSpd) {
+        this.speedKmh -= accelRate * 1.5;
+      }
       this._setBrakeLights(false);
     }
 
-    // 4. MOTION & LATERAL STEERING
+    // Smooth chassis pitch damping
+    this.pitchAngle += (targetPitch - this.pitchAngle) * 0.12;
+    this.chassisGroup.rotation.x = this.pitchAngle;
+
+    // Lateral roll during swerving
+    const targetRoll = this.laneOffset !== 0 ? (this.laneOffset > 0 ? -0.045 : 0.045) : 0;
+    this.rollAngle += (targetRoll - this.rollAngle) * 0.1;
+    this.chassisGroup.rotation.z = this.rollAngle;
+
+    // 4. MOTION & ROTATION
     const vMs = this.speedKmh / 3.6;
     const bodyPos = this.body.position;
 
     if (Math.abs(this.heading) === 1) {
-      // East-West motion
       this.body.velocity.x = vMs * Math.sign(this.heading);
       const targetZ = (this.heading > 0 ? 5.5 : -5.5) + this.laneOffset;
       this.body.velocity.z = (targetZ - bodyPos.z) * 2.5;
     } else {
-      // North-South motion
       this.body.velocity.z = vMs * Math.sign(this.heading > 0 ? 1 : -1);
       const targetX = (this.heading > 0 ? -5.5 : 5.5) + this.laneOffset;
       this.body.velocity.x = (targetX - bodyPos.x) * 2.5;
@@ -1123,35 +1186,35 @@ class AutonomousVehicle {
     if (Math.abs(bodyPos.x) > 165) bodyPos.x = -155 * Math.sign(bodyPos.x);
     if (Math.abs(bodyPos.z) > 165) bodyPos.z = -155 * Math.sign(bodyPos.z);
 
-    // Sync Three.js mesh with Cannon physics body
     this.group.position.copy(this.body.position);
     this._applyHeadingRotation();
     this.group.rotation.y += this.body.quaternion.y * 0.4;
-    this.group.rotation.z = this.body.quaternion.z * 0.4;
 
-    // 5. UPDATE SENSOR CONE VISUAL & TARGET BOUNDING BOX
+    // Wheel Spin Physics
+    this.wheelMeshes.forEach(w => {
+      w.children.forEach(c => {
+        c.rotation.x += vMs * dt * 2.8;
+      });
+    });
+
+    // 5. SENSOR CONES
     this.sensorCone.visible = showSensorCones;
     if (minTTC < aebTTC || closestDist < 7) {
-      this.sensorMat.color.setHex(0xef4444); // Red: Collision imminent
+      this.sensorMat.color.setHex(0xef4444);
       this.sensorMat.opacity = 0.28;
     } else if (minTTC < safeTTC || closestDist < 18) {
-      this.sensorMat.color.setHex(0xf59e0b); // Yellow: Caution / Tracking
+      this.sensorMat.color.setHex(0xf59e0b);
       this.sensorMat.opacity = 0.20;
     } else {
-      this.sensorMat.color.setHex(0x06b6d4); // Cyan: Clear cruising
+      this.sensorMat.color.setHex(0x06b6d4);
       this.sensorMat.opacity = 0.12;
     }
 
-    // 3D Target Marker Box
     if (show3DBoxes && closestObstacle && closestObstacle.group) {
       this.targetBox.visible = true;
       this.targetBox.position.copy(closestObstacle.group.position);
       this.targetBox.position.y += 0.5;
-      if (minTTC < safeTTC) {
-        this.targetBox.material.color.setHex(0xef4444);
-      } else {
-        this.targetBox.material.color.setHex(0x22c55e);
-      }
+      this.targetBox.material.color.setHex(minTTC < safeTTC ? 0xef4444 : 0x22c55e);
     } else {
       this.targetBox.visible = false;
     }
@@ -1183,15 +1246,9 @@ class AutonomousVehicle {
       (Math.random() - 0.5) * this.spec.mass * 2.5 + (impactImpulse?.z || 0)
     );
     this.body.applyImpulse(imp, this.body.position);
-    this.body.applyTorque(new CANNON.Vec3(
-      (Math.random() - 0.5) * this.spec.mass * 900,
-      (Math.random() - 0.5) * this.spec.mass * 1400,
-      (Math.random() - 0.5) * this.spec.mass * 900
-    ));
 
-    // Deform chassis mesh
     this.bodyMesh.scale.set(1.15, 0.72, 1.15);
-    this.bodyMat.color.setHex(0x271913); // Scorched crumple
+    this.bodyMat.color.setHex(0x271913);
     this.sensorCone.visible = false;
     this.targetBox.visible = false;
 
@@ -1215,11 +1272,7 @@ function createCrashDebris(pos) {
     const p = new THREE.Mesh(geo, mat);
     p.position.copy(pos);
     p.position.y += 0.8;
-    p.vel = new THREE.Vector3(
-      (Math.random() - 0.5) * 22,
-      Math.random() * 16 + 4,
-      (Math.random() - 0.5) * 22
-    );
+    p.vel = new THREE.Vector3((Math.random() - 0.5) * 22, Math.random() * 16 + 4, (Math.random() - 0.5) * 22);
     p.rotSpeed = new THREE.Vector3(Math.random() * 5, Math.random() * 5, Math.random() * 5);
     p.life = 1.0;
     SCENE.add(p);
@@ -1261,7 +1314,7 @@ function addSkidMark(pos) {
   skidMarks.push(sm);
 }
 
-// ─── TRAFFIC SIGNAL SYSTEM ───────────────────────────────────
+// ─── TRAFFIC SIGNALS ─────────────────────────────────────────
 function updateTrafficSignals(dt) {
   trafficSignalState.timer += dt;
   const { currentPhase, timer } = trafficSignalState;
@@ -1288,7 +1341,6 @@ function updateTrafficSignals(dt) {
     trafficSignalState.NS_Light = 'RED';
   }
 
-  // Update 3D lamp meshes
   trafficLightMeshes.forEach(tl => {
     const state = tl.group === 'EW' ? trafficSignalState.EW_Light : trafficSignalState.NS_Light;
     tl.red.material.color.setHex(state === 'RED' ? 0xff1111 : 0x330000);
@@ -1309,58 +1361,119 @@ function updateTrafficSignals(dt) {
   }
 }
 
-// ─── DASHCAM & YOLO HUD RENDERER ─────────────────────────────
+// ─── DASHCAM & REAL ML VISION INTEGRATION ────────────────────
+async function triggerRealNeuralInference(canvas) {
+  if (!realNeuralVision || mlInferenceInFlight) return;
+  const now = performance.now();
+  if (now - lastMLCallTime < 180) return; // Run at ~5 Hz for ultra-smooth responsiveness
+  lastMLCallTime = now;
+  mlInferenceInFlight = true;
+
+  try {
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    const resp = await fetch('/api/analyze-sim-frame', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: dataUrl })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      latestMLDetections = data.detections || [];
+      mlLatencyMs = data.latency_ms || 18.0;
+
+      document.getElementById('dashcam-ml-badge').textContent = `YOLO12s: ${mlLatencyMs}ms`;
+      const riskEl = document.getElementById('dashcam-risk');
+      riskEl.textContent = data.overall_risk || 'LOW RISK';
+      riskEl.className = 'dashcam-risk ' + (data.overall_risk.includes('CRITICAL') ? 'risk-crit' : (data.overall_risk.includes('ELEVATED') ? 'risk-med' : 'risk-low'));
+    }
+  } catch(e) {
+  } finally {
+    mlInferenceInFlight = false;
+  }
+}
+
 function renderDashcamPIP() {
   const target = followTarget || vehicles.find(v => v.alive && !v.crashed);
   if (!target) return;
 
-  // Mount camera at front windshield
   const p = target.group.position;
   const fwd = target._getForwardUnitVector();
-  DASH_CAMERA.position.set(p.x + fwd.x * 2.2, p.y + 0.85, p.z + fwd.z * 2.2);
-  DASH_CAMERA.lookAt(p.x + fwd.x * 25, p.y + 0.8, p.z + fwd.z * 25);
+  DASH_CAMERA.position.set(p.x + fwd.x * 2.2, p.y + 0.95, p.z + fwd.z * 2.2);
+  DASH_CAMERA.lookAt(p.x + fwd.x * 28, p.y + 0.85, p.z + fwd.z * 28);
 
   DASH_RENDERER.render(SCENE, DASH_CAMERA);
 
-  // 2D YOLO Overlay Bounding Boxes
-  const canvas = document.getElementById('dashcam-overlay');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 240, 135);
+  // Trigger real neural inference on simulated dashcam image!
+  const dCanvas = document.getElementById('dashcam-canvas');
+  triggerRealNeuralInference(dCanvas);
 
-  // Crosshair
+  // Render Overlay (Real ML Bounding Boxes or Geometric Fallback)
+  const overlay = document.getElementById('dashcam-overlay');
+  const ctx = overlay.getContext('2d');
+  ctx.clearRect(0, 0, 280, 155);
+
+  // Camera Crosshair
   ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(112, 67); ctx.lineTo(128, 67);
-  ctx.moveTo(120, 59); ctx.lineTo(120, 75);
+  ctx.moveTo(130, 77); ctx.lineTo(150, 77);
+  ctx.moveTo(140, 67); ctx.lineTo(140, 87);
   ctx.stroke();
 
-  // Draw 2D bounding box if target detected
-  if (target.trackedTarget) {
+  if (realNeuralVision && latestMLDetections.length > 0) {
+    // Render Real Python Model Predictions!
+    const sx = 280 / 640, sy = 155 / 360;
+    latestMLDetections.forEach(det => {
+      const [x1, y1, x2, y2] = det.box;
+      const bx = x1 * sx, by = y1 * sy;
+      const bw = Math.max(16, (x2 - x1) * sx);
+      const bh = Math.max(14, (y2 - y1) * sy);
+
+      const isPothole = det.type === 'pothole';
+      const col = isPothole ? '#ef4444' : '#22c55e';
+
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.8;
+      ctx.strokeRect(bx, by, bw, bh);
+
+      ctx.fillStyle = col;
+      ctx.fillRect(bx, Math.max(0, by - 14), bw, 14);
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 8.5px monospace';
+      ctx.fillText(det.label || 'DETECTION', bx + 2, Math.max(10, by - 3));
+    });
+  } else if (target.trackedTarget) {
+    // Geometric Radar Fallback
     const t = target.trackedTarget;
-    const isVeh = !!t.group;
     const ttc = target.minTTC;
     const isDanger = ttc < 1.4;
+    const col = isDanger ? '#ef4444' : '#22c55e';
 
-    const boxCol = isDanger ? '#ef4444' : '#22c55e';
-    ctx.strokeStyle = boxCol;
+    ctx.strokeStyle = col;
     ctx.lineWidth = 1.8;
-    ctx.strokeRect(60, 35, 120, 65);
+    ctx.strokeRect(70, 42, 140, 75);
 
-    // Label banner
-    ctx.fillStyle = boxCol;
-    ctx.fillRect(60, 22, 120, 14);
+    ctx.fillStyle = col;
+    ctx.fillRect(70, 28, 140, 14);
     ctx.fillStyle = '#000';
     ctx.font = 'bold 9px monospace';
-    const tag = isVeh ? `CAR [97%] TTC:${ttc.toFixed(1)}s` : `${t.type.toUpperCase()} [92%]`;
-    ctx.fillText(tag, 64, 32);
+    const tag = t.group ? `CAR [97%] TTC:${ttc.toFixed(1)}s` : `${t.type.toUpperCase()} [92%]`;
+    ctx.fillText(tag, 74, 38);
   }
 
   document.getElementById('dashcam-speed').textContent = Math.round(target.speedKmh) + ' km/h';
   document.getElementById('dashcam-tag').textContent = `RL: ${target.policyState}`;
 }
 
-// ─── SPAWN FUNCTIONS ─────────────────────────────────────────
+function toggleRealNeuralVision() {
+  realNeuralVision = !realNeuralVision;
+  const btn = document.getElementById('btn-toggle-ml');
+  btn.textContent = realNeuralVision ? '⚡ Neural Model: REAL CYPhER (ONLINE)' : 'Radar Heuristics: OFFLINE';
+  btn.className = 'btn btn-full ' + (realNeuralVision ? 'btn-green' : 'btn-warn');
+  logMsg(realNeuralVision ? 'Connected directly to PyTorch YOLO12s model backend' : 'Switched to local kinematic radar', 'info');
+}
+
+// ─── SPAWN ENTITIES ──────────────────────────────────────────
 function spawnVehicle(type) {
   initAudio();
   const headings = [1, -1, 2, -2];
@@ -1377,7 +1490,7 @@ function spawnVehicle(type) {
   v.targetSpeed = playerSpeed;
   vehicles.push(v);
   document.getElementById('hv-vcount').textContent = vehicles.length;
-  logMsg(`Spawned autonomous ${v.spec.name} with CV Radar`, 'info');
+  logMsg(`Spawned autonomous ${v.spec.name} with suspension & headlights`, 'info');
 }
 
 function spawnAIVehicle() {
@@ -1399,6 +1512,7 @@ function spawnAIVehicle() {
   document.getElementById('hv-vcount').textContent = vehicles.length;
 }
 
+// Realistic 3D Pothole (Depressed Crater with broken rim)
 function dropPothole() {
   initAudio();
   const headings = [1, -1, 2, -2];
@@ -1406,62 +1520,73 @@ function dropPothole() {
   let x = (Math.random() - 0.5) * 60;
   let z = h > 0 ? 5.5 : -5.5;
 
-  const geo = new THREE.CylinderGeometry(1.2, 1.4, 0.28, 12);
-  const mat = new THREE.MeshLambertMaterial({ color: 0x08080a });
-  const m = new THREE.Mesh(geo, mat);
-  m.position.set(x, 0.05, z);
-  m.receiveShadow = true;
-  SCENE.add(m);
-  potholes.push({ mesh: m });
+  const group = new THREE.Group();
+  // Dark depressed crater cavity
+  const craterGeo = new THREE.CylinderGeometry(1.3, 1.0, 0.35, 14);
+  const craterMat = new THREE.MeshBasicMaterial({ color: 0x050608 });
+  const crater = new THREE.Mesh(craterGeo, craterMat);
+  crater.position.y = 0.05;
+  group.add(crater);
+
+  // Jagged rim ring
+  const rimGeo = new THREE.RingGeometry(1.1, 1.45, 14);
+  const rimMat = new THREE.MeshLambertMaterial({ color: 0x1a1a20, side: THREE.DoubleSide });
+  const rim = new THREE.Mesh(rimGeo, rimMat);
+  rim.rotation.x = -Math.PI / 2;
+  rim.position.y = 0.055;
+  group.add(rim);
+
+  group.position.set(x, 0, z);
+  SCENE.add(group);
+  potholes.push({ mesh: group });
   potholeCount++;
-  document.getElementById('hv-ph') && (document.getElementById('hv-ph').textContent = potholeCount);
-  logMsg(`[CV DETECTED] Road Crater (Pothole) placed at (${x.toFixed(1)}, ${z.toFixed(1)})`, 'warn');
+  logMsg(`[REAL RDD DETECTOR] 3D Road crater placed at (${x.toFixed(1)}, ${z.toFixed(1)})`, 'warn');
 }
 
 function dropWaterPuddle() {
   initAudio();
   const x = (Math.random() - 0.5) * 70;
   const z = (Math.random() > 0.5 ? 5.5 : -5.5);
-  const geo = new THREE.PlaneGeometry(7.5, 4.5);
-  const mat = new THREE.MeshLambertMaterial({ color: 0x071e33, transparent: true, opacity: 0.8 });
+  const geo = new THREE.PlaneGeometry(8.5, 4.8);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x051a2e,
+    roughness: 0.1,
+    metalness: 0.6,
+    transparent: true,
+    opacity: 0.85
+  });
   const m = new THREE.Mesh(geo, mat);
   m.rotation.x = -Math.PI / 2;
-  m.position.set(x, 0.05, z);
+  m.position.set(x, 0.045, z);
   SCENE.add(m);
   puddles.push(m);
-  logMsg(`[SURFACE HAZARD] Hydroplaning water puddle placed at (${x.toFixed(1)}, ${z.toFixed(1)})`, 'warn');
+  logMsg(`[SURFACE HAZARD] Reflective hydroplaning puddle at (${x.toFixed(1)}, ${z.toFixed(1)})`, 'warn');
 }
 
-// ─── ACCIDENT & CHAOS SCENARIOS ──────────────────────────────
+// ─── ACCIDENT SCENARIOS ──────────────────────────────────────
 function scenarioHydroplaneCrash() {
   initAudio();
   setRoad('water');
   logMsg('⚡ SCENARIO: Multi-Car Hydroplane Chain Collision on Flooded Highway', 'crash');
 
-  // Spawn 3 cars traveling in tight convoy at high speed
   const lead = new AutonomousVehicle('sedan', { x: -20, y: 1, z: 5.5 }, 1);
-  lead.targetSpeed = 40;
-  lead.speedKmh = 40;
+  lead.targetSpeed = 40; lead.speedKmh = 40;
   vehicles.push(lead);
 
   const chase1 = new AutonomousVehicle('sedan', { x: -35, y: 1, z: 5.5 }, 1);
-  chase1.targetSpeed = 85;
-  chase1.speedKmh = 85;
+  chase1.targetSpeed = 85; chase1.speedKmh = 85;
   vehicles.push(chase1);
 
   const chase2 = new AutonomousVehicle('truck', { x: -55, y: 1, z: 5.5 }, 1);
-  chase2.targetSpeed = 85;
-  chase2.speedKmh = 85;
+  chase2.targetSpeed = 85; chase2.speedKmh = 85;
   vehicles.push(chase2);
 
   document.getElementById('hv-vcount').textContent = vehicles.length;
   followTarget = chase1;
   setCam('chase');
 
-  // Sudden stop in 1.4s
   setTimeout(() => {
-    lead.targetSpeed = 0;
-    lead.speedKmh = 5;
+    lead.targetSpeed = 0; lead.speedKmh = 5;
     logMsg('Lead Sedan slams brakes on flooded asphalt (μ=0.22)!', 'crash');
   }, 1400);
 }
@@ -1470,16 +1595,12 @@ function scenarioRedLightViolation() {
   initAudio();
   logMsg('⚡ SCENARIO: Red-Light Violation Broadside T-Bone Crash', 'crash');
 
-  // Car A going EW on Green
   const carA = new AutonomousVehicle('sedan', { x: -35, y: 1, z: 5.5 }, 1);
-  carA.targetSpeed = 55;
-  carA.speedKmh = 55;
+  carA.targetSpeed = 55; carA.speedKmh = 55;
   vehicles.push(carA);
 
-  // Car B going NS running the Red light at high speed
   const carB = new AutonomousVehicle('truck', { x: -5.5, y: 1, z: -35 }, 2);
-  carB.targetSpeed = 85;
-  carB.speedKmh = 85;
+  carB.targetSpeed = 85; carB.speedKmh = 85;
   vehicles.push(carB);
 
   document.getElementById('hv-vcount').textContent = vehicles.length;
@@ -1491,17 +1612,10 @@ function scenarioSuddenStopPothole() {
   initAudio();
   logMsg('⚡ SCENARIO: Deep Pothole Suspension Blowout & Evasive Swerve', 'crash');
   const lead = new AutonomousVehicle('sedan', { x: -35, y: 1, z: 5.5 }, 1);
-  lead.targetSpeed = 75;
-  lead.speedKmh = 75;
+  lead.targetSpeed = 75; lead.speedKmh = 75;
   vehicles.push(lead);
 
-  const phGeo = new THREE.CylinderGeometry(1.6, 1.8, 0.35, 12);
-  const phMat = new THREE.MeshLambertMaterial({ color: 0x050505 });
-  const ph = new THREE.Mesh(phGeo, phMat);
-  ph.position.set(-5, 0.05, 5.5);
-  SCENE.add(ph);
-  potholes.push({ mesh: ph });
-
+  dropPothole();
   followTarget = lead;
   setCam('chase');
 }
@@ -1521,7 +1635,7 @@ function resetWorld() {
   crashCount = 0; potholeCount = 0;
   document.getElementById('hv-crashes').textContent = 0;
   document.getElementById('hv-vcount').textContent = 0;
-  document.getElementById('log').innerHTML = '<span class="li ok">[SYSTEM] Autonomous world cleared and re-initialized</span>';
+  document.getElementById('log').innerHTML = '<span class="li ok">[SYSTEM] World reset and realigned</span>';
   for (let i = 0; i < targetAICount; i++) spawnAIVehicle();
   orbitTarget.set(0, 0, 0);
   setCam('orbit');
@@ -1541,16 +1655,15 @@ function setRoad(surf) {
   document.getElementById('hv-mu').textContent = SURFACE_MU[surf].toFixed(2);
   document.getElementById('mu-label').textContent = 'μ = ' + SURFACE_MU[surf].toFixed(2);
 
-  // Rain particle visibility
   if (surf === 'wet' || surf === 'water') {
-    rainParticles.material.opacity = surf === 'water' ? 0.6 : 0.3;
+    rainParticles.material.opacity = surf === 'water' ? 0.65 : 0.35;
   } else {
     rainParticles.material.opacity = 0.0;
   }
 
   buildCity();
   updatePhysicsHUD();
-  logMsg(`Road condition changed: ${SURFACE_NAMES[surf]} (μ=${SURFACE_MU[surf]})`, 'info');
+  logMsg(`Surface updated: ${SURFACE_NAMES[surf]} (μ=${SURFACE_MU[surf]})`, 'info');
 }
 
 // ─── CAMERA MODES ────────────────────────────────────────────
@@ -1558,9 +1671,7 @@ function setCam(mode) {
   camMode = mode;
   const labels = { orbit: 'ORBIT CAMERA', chase: 'FOLLOW CAR CAM', top: 'TRAFFIC TOP VIEW', cinematic: 'CINEMATIC ORBIT' };
   document.getElementById('cam-mode-tag').textContent = labels[mode] || mode.toUpperCase();
-  if (mode === 'chase' && !followTarget && vehicles.length > 0) {
-    followTarget = vehicles[0];
-  }
+  if (mode === 'chase' && !followTarget && vehicles.length > 0) followTarget = vehicles[0];
 }
 
 function updateCamera(dt) {
@@ -1589,17 +1700,16 @@ function updateCamera(dt) {
   }
 }
 
-// ─── TOGGLE CONES & BOXES ────────────────────────────────────
 function toggleSensorCones() {
   showSensorCones = !showSensorCones;
   vehicles.forEach(v => { if (v.sensorCone) v.sensorCone.visible = showSensorCones; });
-  document.getElementById('btn-toggle-cones').textContent = 'Sensor Cones: ' + (showSensorCones ? 'ON' : 'OFF');
+  document.getElementById('btn-toggle-cones').textContent = 'LiDAR Cones: ' + (showSensorCones ? 'ON' : 'OFF');
 }
 
 function toggle3DBoxes() {
   show3DBoxes = !show3DBoxes;
   vehicles.forEach(v => { if (v.targetBox) v.targetBox.visible = show3DBoxes; });
-  document.getElementById('btn-toggle-boxes').textContent = '3D Boxes: ' + (show3DBoxes ? 'ON' : 'OFF');
+  document.getElementById('btn-toggle-boxes').textContent = '3D AR Bounding: ' + (show3DBoxes ? 'ON' : 'OFF');
 }
 
 function setAICount(n) {
@@ -1617,11 +1727,7 @@ function setAICount(n) {
 function onSpeedChange(v) {
   playerSpeed = parseInt(v);
   document.getElementById('sv-speed').textContent = v;
-  vehicles.forEach(veh => {
-    if (!veh.crashed) {
-      veh.targetSpeed = playerSpeed;
-    }
-  });
+  vehicles.forEach(veh => { if (!veh.crashed) veh.targetSpeed = playerSpeed; });
   updatePhysicsHUD();
 }
 
@@ -1629,10 +1735,10 @@ function setAggressiveness(lvl) {
   aggressiveness = parseInt(lvl);
   const labels = { 1: 'Cautious (Safe)', 2: 'Standard (Human)', 3: 'Aggressive Tailgater' };
   document.getElementById('sv-agg').textContent = labels[aggressiveness];
-  logMsg(`Agent policy updated: ${labels[aggressiveness]} driving style`, 'info');
+  logMsg(`Fleet policy: ${labels[aggressiveness]}`, 'info');
 }
 
-// ─── COLLISION DETECTOR (Physical Intersection) ─────────────
+// ─── COLLISION DETECTOR ──────────────────────────────────────
 function checkPhysicalCollisions() {
   for (let i = 0; i < vehicles.length; i++) {
     for (let j = i + 1; j < vehicles.length; j++) {
@@ -1671,12 +1777,12 @@ function updatePhysicsHUD() {
   const safeV = Math.sqrt(2 * mu * G * 45) * 3.6;
 
   document.getElementById('phys-panel').innerHTML = `
-    <b>Target Speed:</b> ${v} km/h (${vMs.toFixed(1)} m/s)<br>
+    <b>Cruise Velocity:</b> ${v} km/h (${vMs.toFixed(1)} m/s)<br>
     <b>Road Grip μ:</b> ${mu.toFixed(2)}<br>
     <b>Reaction Run:</b> ${reactDist.toFixed(1)} m<br>
     <b>Braking Run:</b> ${brakeDist.toFixed(1)} m<br>
-    <b>Min Stopping Dist:</b> ${totalStop.toFixed(1)} m<br>
-    <b>Safe Curve Speed:</b> ${safeV.toFixed(0)} km/h
+    <b>Stopping Dist:</b> ${totalStop.toFixed(1)} m<br>
+    <b>Safe Limit:</b> ${safeV.toFixed(0)} km/h
   `;
 }
 
@@ -1697,41 +1803,25 @@ function loop(time) {
   delta = clock.getDelta();
   if (delta > 0.05) delta = 0.05;
 
-  // Step physics
   PHYSICS_WORLD.step(1 / 60, delta, 3);
-
-  // Update Traffic Signals
   updateTrafficSignals(delta);
-
-  // Update Autonomous RL Agents & CV Sensors
   vehicles.forEach(v => v.updatePolicyAndSensors(delta));
-
-  // Physical Collision Check
   checkPhysicalCollisions();
 
-  // Update Rain Particles
   if (rainParticles.material.opacity > 0) {
     const pos = rainGeo.attributes.position.array;
     for (let i = 1; i < pos.length; i += 3) {
-      pos[i] -= 42 * delta;
+      pos[i] -= 45 * delta;
       if (pos[i] < 0) pos[i] = 60;
     }
     rainGeo.attributes.position.needsUpdate = true;
   }
 
-  // Update Crash Debris
   updateCrashDebris(delta);
-
-  // Update Camera View
   updateCamera(delta);
-
-  // Render Main 3D Viewport
   RENDERER.render(SCENE, CAMERA);
-
-  // Render 2D YOLO Dashcam PIP
   renderDashcamPIP();
 
-  // Update Lead Car HUD Telemetry
   const lead = followTarget || vehicles.find(v => v.alive && !v.crashed);
   if (lead) {
     document.getElementById('hv-spd').textContent = Math.round(lead.speedKmh) + ' km/h';

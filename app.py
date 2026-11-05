@@ -33,6 +33,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT))
 os.chdir(PROJECT_ROOT)
 
+# Configure OpenCV low-latency networking options for live camera streams
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "fflags;nobuffer|flags;low_delay|timeout;4000000"
+
 from road_cv.core.orchestrator import CYPhEROrchestrator, VALID_MODES
 
 app = FastAPI(title="CYPhER Web Dashboard", description="Minimalist Road Perception & Hazard Intelligence UI")
@@ -202,12 +205,118 @@ async def analyze_video(
     return JSONResponse(content=clean_schema)
 
 
+@app.post("/api/analyze-sim-frame")
+async def analyze_sim_frame(payload: Dict[str, Any]):
+    """
+    Run real CYPhER PyTorch vision models on a simulated dashcam frame.
+    Processes simulated road views through actual YOLO12s / RDD2022 damage,
+    vehicle detection, and safety fusion pipelines.
+    """
+    orch = get_orchestrator()
+    data_url = payload.get("image", "")
+    if not data_url:
+        raise HTTPException(status_code=400, detail="Missing frame image data.")
+    
+    if "," in data_url:
+        data_url = data_url.split(",", 1)[1]
+    
+    try:
+        img_bytes = base64.b64decode(data_url)
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to decode base64 image: {e}")
+
+    if frame is None:
+        raise HTTPException(status_code=400, detail="Invalid simulated image frame.")
+
+    # Scale to standard inference size (e.g. 640x360) for real-time response (< 25ms)
+    h, w = frame.shape[:2]
+    if max(h, w) > 640:
+        scale = 640.0 / max(h, w)
+        frame = cv2.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
+    t0 = time.perf_counter()
+    # Run active perception modules on simulated frame
+    results = orch.run(
+        source=frame,
+        mode="damage,vehicles,traffic_signals,accident,surface",
+        save_visualizations=False,
+        is_video=True
+    )
+    latency_ms = (time.perf_counter() - t0) * 1000.0
+
+    clean_caps = results.get("capabilities", {})
+    fusion = results.get("fusion", {})
+
+    # Extract structured detections for 3D simulator HUD & AR boxes
+    detections = []
+    
+    # Potholes & road damage from real RDD model
+    damage_preds = clean_caps.get("damage", {}).get("predictions", [])
+    for d in damage_preds:
+        cname = d.get("class_name", "pothole")
+        conf = float(d.get("confidence", 0.0))
+        box = d.get("box", [0, 0, 0, 0])
+        detections.append({
+            "type": "pothole" if "pothole" in cname.lower() or "d40" in cname.lower() else "road_damage",
+            "label": f"{cname.upper()} {int(conf * 100)}%",
+            "confidence": round(conf, 2),
+            "box": box
+        })
+
+    # Vehicles from real YOLO vehicle detector
+    veh_preds = clean_caps.get("vehicles", {}).get("predictions", [])
+    for v in veh_preds:
+        cname = v.get("class_name", "vehicle")
+        conf = float(v.get("confidence", 0.0))
+        box = v.get("box", [0, 0, 0, 0])
+        detections.append({
+            "type": "vehicle",
+            "label": f"{cname.upper()} {int(conf * 100)}%",
+            "confidence": round(conf, 2),
+            "box": box
+        })
+
+    # Traffic signals
+    sig_preds = clean_caps.get("traffic_signals", {}).get("predictions", {}).get("signals", [])
+    for s in sig_preds:
+        sstate = s.get("signal_state", "signal")
+        conf = float(s.get("state_confidence", s.get("detection_conf", 0.9)))
+        box = s.get("box", [0, 0, 0, 0])
+        detections.append({
+            "type": "signal",
+            "label": f"SIGNAL {sstate.upper()}",
+            "confidence": round(conf, 2),
+            "box": box
+        })
+
+    surface_pred = clean_caps.get("surface", {}).get("predictions", {})
+
+    return JSONResponse(content={
+        "status": "success",
+        "latency_ms": round(latency_ms, 1),
+        "model_engine": "CYPhER YOLO12s-RDD2022 + Hybrid Perception",
+        "detections_count": len(detections),
+        "detections": detections,
+        "surface": {
+            "condition": surface_pred.get("visual_condition", "dry"),
+            "friction_est": surface_pred.get("estimated_friction", 0.85)
+        },
+        "overall_risk": fusion.get("overall_road_safety_risk", "LOW_RISK")
+    })
+
+
 @app.get("/api/stream")
 def stream_feed(
     source: str = Query("0"),
     mode: str = Query("all")
 ):
-    """Continuous MJPEG streaming endpoint for phone IP webcam or USB webcam."""
+    """
+    High-performance real-time MJPEG streaming endpoint.
+    Includes zero-latency socket buffer draining, adaptive frame scaling,
+    and cadence-optimized neural inference for smooth 25-30 FPS.
+    """
     global stream_active, stream_telemetry
     stream_active = True
     orch = get_orchestrator()
@@ -217,51 +326,93 @@ def stream_feed(
     if target_src.isdigit():
         cap = cv2.VideoCapture(int(target_src), cv2.CAP_DSHOW)
     else:
-        # Prepend http:// if missing
         if not target_src.startswith("http://") and not target_src.startswith("https://"):
             target_src = "http://" + target_src
-        # Append /video if user typed IP:port without endpoint
         if target_src.startswith("http://") or target_src.startswith("https://"):
             if not target_src.endswith("/video") and not target_src.endswith(".mjpg") and not target_src.endswith("/shot.jpg") and not target_src.endswith(".mp4"):
                 target_src = target_src.rstrip("/") + "/video"
         
         cap = cv2.VideoCapture(target_src)
         if not cap.isOpened():
-            # Fallback to literal source parameter
             cap = cv2.VideoCapture(source)
 
     if not cap.isOpened():
         raise HTTPException(status_code=400, detail=f"Cannot connect to camera at '{source}'. Attempted: '{target_src}'.")
 
+    # Set minimal internal buffer
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     def frame_generator():
         global stream_active, stream_telemetry
         t_prev = time.perf_counter()
         fps_hist = []
+        frame_idx = 0
+        cached_caps = {}
+        cached_fusion = {"overall_road_safety_risk": "LOW_RISK", "detected_hazards_count": 0}
 
         try:
             while stream_active:
+                # Discard buffered backlog frames to prevent network video delay
+                if not target_src.isdigit():
+                    cap.grab()
+
                 ret, frame = cap.read()
                 if not ret or frame is None:
-                    time.sleep(0.04)
+                    time.sleep(0.02)
                     continue
 
-                # Optimize high-res phone captures (e.g. 1440p or 1080p) for real-time GPU processing
-                h, w = frame.shape[:2]
-                if max(h, w) > 960:
-                    scale = 960.0 / max(h, w)
-                    frame = cv2.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+                frame_idx += 1
 
-                # Run inference on frame
+                # Normalize resolution for real-time 30+ FPS GPU inference
+                h, w = frame.shape[:2]
+                infer_scale = 1.0
+                if max(h, w) > 640:
+                    infer_scale = 640.0 / max(h, w)
+                    infer_frame = cv2.resize(frame, (int(w * infer_scale), int(h * infer_scale)), interpolation=cv2.INTER_AREA)
+                else:
+                    infer_frame = frame
+
                 t0 = time.perf_counter()
-                results = orch.run(source=frame, mode=mode, save_visualizations=False, is_video=True)
+
+                # Optimized streaming cadence:
+                # Fast hazard detectors (damage, vehicles, traffic_signals, accident) run continuously
+                # Context modules (surface, weather) run every 8 frames to maintain 30 FPS
+                if mode == "all":
+                    if frame_idx % 8 == 1 or not cached_caps:
+                        active_mode = "damage,vehicles,traffic_signals,accident,surface,weather"
+                    else:
+                        active_mode = "damage,vehicles,traffic_signals,accident"
+                else:
+                    active_mode = mode
+
+                results = orch.run(source=infer_frame, mode=active_mode, save_visualizations=False, is_video=True)
                 latency = (time.perf_counter() - t0) * 1000.0
 
-                clean_caps = results.get("capabilities", {})
-                fusion = results.get("fusion", {})
+                # Rescale detected bounding boxes back to display frame coordinates
+                new_caps = results.get("capabilities", {})
+                if infer_scale != 1.0:
+                    inv_scale = 1.0 / infer_scale
+                    for mod_name, mod_data in new_caps.items():
+                        preds = mod_data.get("predictions", [])
+                        if isinstance(preds, list):
+                            for p in preds:
+                                if "box" in p and isinstance(p["box"], list):
+                                    p["box"] = [int(coord * inv_scale) for coord in p["box"]]
+                        elif isinstance(preds, dict):
+                            for key in ["signals", "obstacles", "incidents", "details"]:
+                                if key in preds and isinstance(preds[key], list):
+                                    for item in preds[key]:
+                                        if isinstance(item, dict):
+                                            if "box" in item:
+                                                item["box"] = [int(coord * inv_scale) for coord in item["box"]]
+                                            if "boxes" in item:
+                                                item["boxes"] = [[int(c * inv_scale) for c in b] for b in item["boxes"]]
 
-                # Update stream telemetry
+                # Update cache
+                cached_caps.update(new_caps)
+                cached_fusion = results.get("fusion", cached_fusion)
+
+                # Compute smooth rolling FPS
                 t_now = time.perf_counter()
                 inst_fps = 1.0 / max(1e-4, t_now - t_prev)
                 t_prev = t_now
@@ -270,19 +421,19 @@ def stream_feed(
                     fps_hist.pop(0)
 
                 stream_telemetry = {
-                    "fusion": fusion,
+                    "fusion": cached_fusion,
                     "performance": {
                         "total_pipeline_latency_ms": round(latency, 1),
                         "fps": round(sum(fps_hist) / len(fps_hist), 1)
                     },
-                    "capabilities": clean_caps
+                    "capabilities": cached_caps
                 }
 
-                # Render composite visual
-                vis = orch._render_composite_overlay(frame, clean_caps, fusion)
+                # Render composite visual with crisp annotations
+                vis = orch._render_composite_overlay(frame, cached_caps, cached_fusion)
 
-                # JPEG encode
-                ret_enc, jpeg = cv2.imencode(".jpg", vis, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+                # Fast JPEG compression
+                ret_enc, jpeg = cv2.imencode(".jpg", vis, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
                 if not ret_enc:
                     continue
 
